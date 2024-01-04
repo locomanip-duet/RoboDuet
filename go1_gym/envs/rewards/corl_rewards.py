@@ -181,17 +181,17 @@ class CoRLRewards:
             desired_xs_nom = torch.tensor([desired_stance_length / 2,  desired_stance_length / 2, -desired_stance_length / 2, -desired_stance_length / 2], device=self.env.device).unsqueeze(0)
 
         # raibert offsets
-        phases = torch.abs(1.0 - (self.env.foot_indices * 2.0)) * 1.0 - 0.5
-        frequencies = self.env.commands[:, 4]
-        x_vel_des = self.env.commands[:, 0:1]
-        yaw_vel_des = self.env.commands[:, 2:3]
-        y_vel_des = yaw_vel_des * desired_stance_length / 2
-        desired_ys_offset = phases * y_vel_des * (0.5 / frequencies.unsqueeze(1))
-        desired_ys_offset[:, 2:4] *= -1
-        desired_xs_offset = phases * x_vel_des * (0.5 / frequencies.unsqueeze(1))
+        # phases = torch.abs(1.0 - (self.env.foot_indices * 2.0)) * 1.0 - 0.5
+        # frequencies = self.env.commands[:, 4]
+        # x_vel_des = self.env.commands[:, 0:1]
+        # yaw_vel_des = self.env.commands[:, 2:3]
+        # y_vel_des = yaw_vel_des * desired_stance_length / 2
+        # desired_ys_offset = phases * y_vel_des * (0.5 / frequencies.unsqueeze(1))
+        # desired_ys_offset[:, 2:4] *= -1
+        # desired_xs_offset = phases * x_vel_des * (0.5 / frequencies.unsqueeze(1))
 
-        desired_ys_nom = desired_ys_nom + desired_ys_offset
-        desired_xs_nom = desired_xs_nom + desired_xs_offset
+        # desired_ys_nom = desired_ys_nom + desired_ys_offset
+        # desired_xs_nom = desired_xs_nom + desired_xs_offset
 
         desired_footsteps_body_frame = torch.cat((desired_xs_nom.unsqueeze(2), desired_ys_nom.unsqueeze(2)), dim=2)
 

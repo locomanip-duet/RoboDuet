@@ -667,7 +667,7 @@ class LeggedRobot(BaseTask):
     def _process_rigid_body_props(self, props, env_id):
         self.default_body_mass = props[0].mass
 
-        props[0].mass = self.default_body_mass + self.payloads[env_id]
+        props[0].mass = self.default_body_mass + self.payloads[env_id] + 3.5
         props[0].com = gymapi.Vec3(self.com_displacements[env_id, 0], self.com_displacements[env_id, 1],
                                    self.com_displacements[env_id, 2])
         return props
@@ -846,6 +846,10 @@ class LeggedRobot(BaseTask):
             self.foot_indices = torch.remainder(torch.cat([foot_indices[i].unsqueeze(1) for i in range(4)], dim=1), 1.0)
 
             for idxs in foot_indices:
+                
+                idxs[(torch.norm(self.commands[:, :2], dim=1) < 0.2)] = 0.3 # mark stand
+                
+                
                 stance_idxs = torch.remainder(idxs, 1) < durations
                 swing_idxs = torch.remainder(idxs, 1) > durations
 
@@ -919,24 +923,24 @@ class LeggedRobot(BaseTask):
         actions_scaled = actions[:, :12] * self.cfg.control.action_scale
         actions_scaled[:, [0, 3, 6, 9]] *= self.cfg.control.hip_scale_reduction  # scale down hip flexion range
 
-        if self.cfg.domain_rand.randomize_lag_timesteps:
-            self.lag_buffer = self.lag_buffer[1:] + [actions_scaled.clone()]
-            self.joint_pos_target = self.lag_buffer[0] + self.default_dof_pos
-        else:
-            self.joint_pos_target = actions_scaled + self.default_dof_pos
+        # if self.cfg.domain_rand.randomize_lag_timesteps:
+        #     self.lag_buffer = self.lag_buffer[1:] + [actions_scaled.clone()]
+        #     self.joint_pos_target = self.lag_buffer[0] + self.default_dof_pos
+        # else:
+        #     self.joint_pos_target = actions_scaled + self.default_dof_pos
 
         control_type = self.cfg.control.control_type
 
-        if control_type == "actuator_net":
-            self.joint_pos_err = self.dof_pos - self.joint_pos_target + self.motor_offsets
-            self.joint_vel = self.dof_vel
-            torques = self.actuator_network(self.joint_pos_err, self.joint_pos_err_last, self.joint_pos_err_last_last,
-                                            self.joint_vel, self.joint_vel_last, self.joint_vel_last_last)
-            self.joint_pos_err_last_last = torch.clone(self.joint_pos_err_last)
-            self.joint_pos_err_last = torch.clone(self.joint_pos_err)
-            self.joint_vel_last_last = torch.clone(self.joint_vel_last)
-            self.joint_vel_last = torch.clone(self.joint_vel)
-        elif control_type == "P":
+        # if control_type == "actuator_net":
+        #     self.joint_pos_err = self.dof_pos - self.joint_pos_target + self.motor_offsets
+        #     self.joint_vel = self.dof_vel
+        #     torques = self.actuator_network(self.joint_pos_err, self.joint_pos_err_last, self.joint_pos_err_last_last,
+        #                                     self.joint_vel, self.joint_vel_last, self.joint_vel_last_last)
+        #     self.joint_pos_err_last_last = torch.clone(self.joint_pos_err_last)
+        #     self.joint_pos_err_last = torch.clone(self.joint_pos_err)
+        #     self.joint_vel_last_last = torch.clone(self.joint_vel_last)
+        #     self.joint_vel_last = torch.clone(self.joint_vel)
+        if control_type == "P":
             torques = self.p_gains * self.Kp_factors * (
                     self.joint_pos_target - self.dof_pos + self.motor_offsets) - self.d_gains * self.Kd_factors * self.dof_vel
         else:
