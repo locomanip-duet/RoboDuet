@@ -11,6 +11,21 @@ class CoRLRewards:
     def load_env(self, env):
         self.env = env
 
+    def _reward_loco_energy(self):
+      
+        # print("loco energy: ", -0.00005*torch.sum(torch.square(self.env.torques[:, :self.env.num_actions_loco]*self.env.dof_vel[:, :self.env.num_actions_loco]), dim=1)[:20])
+        return torch.sum(
+            torch.square(self.env.torques[:, :self.env.num_actions_loco]*self.env.dof_vel[:, :self.env.num_actions_loco])
+            , dim=1)
+    
+    def _reward_arm_energy(self):
+      
+        # print("loco energy: ", -0.00005*torch.sum(torch.square(self.env.torques[:, :self.env.num_actions_loco]*self.env.dof_vel[:, :self.env.num_actions_loco]), dim=1)[:20])
+        # print(self.env.torques[:, self.env.num_actions_loco:], self.env.dof_vel[:, self.env.num_actions_loco:])
+        return torch.sum(
+            torch.square(self.env.torques[:, self.env.num_actions_loco:]*self.env.dof_vel[:, self.env.num_actions_loco:])
+            , dim=1)
+
     # ------------ reward functions----------------
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
@@ -25,6 +40,19 @@ class CoRLRewards:
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
         return torch.square(self.env.base_lin_vel[:, 2])
+
+    def _reward_arm_manip_commands_tracking_combine(self):
+        lpy = self.env._get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        rpy = self.env._get_roll_pitch_yaw_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        lpy_error = torch.sum((torch.abs(lpy - self.env.commands[:, 2:5])) / self.env.commands_arm_lpy_range, dim=1)
+        rpy_error = torch.sum((torch.abs(rpy - self.env.commands[:, 5:8])) / self.env.commands_arm_rpy_range, dim=1)
+        # rpy_error = torch.sum((torch.abs(self.env.commands[:, 5:8])) / self.env.commands_arm_rpy_range, dim=1)
+        
+        # print(f"lpy error: {lpy_error[:20]}")
+        # print(f"rpy error: {rpy_error[:20]}")
+        # print(f"rwd : {torch.exp(-(lpy_error + rpy_error))[:20]}")
+        
+        return torch.exp(-(6*lpy_error + rpy_error))
 
     def _reward_ang_vel_xy(self):
         # Penalize xy axes base angular velocity

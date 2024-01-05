@@ -837,11 +837,12 @@ class LeggedRobot(BaseTask):
             [torch.Tensor]: Torques sent to the simulation
         """
         # pd controller
-        actions_scaled = actions[:, :12] * self.cfg.control.action_scale
+        actions_scaled = actions[:, :self.num_actions] * self.cfg.control.action_scale
         actions_scaled[:, [0, 3, 6, 9]] *= self.cfg.control.hip_scale_reduction  # scale down hip flexion range
 
         actions_scaled = torch.nn.functional.pad(actions_scaled, (0, self.num_dof - self.num_actions), "constant", 0.0)
 
+        self.joint_pos_target = actions_scaled + self.default_dof_pos
         control_type = self.cfg.control.control_type
 
         if control_type == "P":
@@ -1041,6 +1042,22 @@ class LeggedRobot(BaseTask):
         self.gym.refresh_net_contact_force_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
         self.gym.render_all_camera_sensors(self.sim)
+
+        self.commands_arm_lpy_range = torch.tensor(
+            [self.cfg.commands.l[1] - self.cfg.commands.l[0],
+             self.cfg.commands.p[1] - self.cfg.commands.p[0],
+             self.cfg.commands.y[1] - self.cfg.commands.y[0]],
+            device=self.device,
+            requires_grad=False,
+        ).reshape(1, -1)
+        
+        self.commands_arm_rpy_range = torch.tensor(
+            [self.cfg.commands.roll_ee[1] - self.cfg.commands.roll_ee[0],
+             self.cfg.commands.pitch_ee[1] - self.cfg.commands.pitch_ee[0],
+             self.cfg.commands.yaw_ee[1] - self.cfg.commands.yaw_ee[0]],
+            device=self.device,
+            requires_grad=False,
+        ).reshape(1, -1)
 
         # create some wrapper tensors for different slices
         self.root_states = gymtorch.wrap_tensor(actor_root_state)

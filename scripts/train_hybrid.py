@@ -262,16 +262,7 @@ def train_go1(headless=True):
         }
 
 
-    Cfg.rewards.use_terminal_roll = True
-    Cfg.rewards.use_terminal_pitch = True
-    Cfg.env.keep_arm_fixed = True
-    Cfg.rewards.use_terminal_roll_pitch = False # TODO
-    Cfg.asset.render_sphere = True # NOTE no use in headless 
-    Cfg.rewards.terminal_body_roll = 0.10
-    Cfg.rewards.terminal_body_pitch = 0.1
-    Cfg.rewards.terminal_body_pitch_roll = 80./180.*torch.pi
-    Cfg.rewards.headupdown_thres = 0.1
-    Cfg.control.update_obs_freq = 50 # Hz
+
     
     
     Cfg.commands.num_commands = 8
@@ -317,6 +308,7 @@ def train_go1(headless=True):
     Cfg.obs_scales.wx = 1.
     Cfg.obs_scales.wy = 1.
     Cfg.obs_scales.wz = 1.
+    Cfg.control.stiffness = {'joint': 35., 'widow': 5.}  # [N*m/rad]
     Cfg.control.stiffness_leg = {'joint': 35.}  # [N*m/rad]
     Cfg.control.damping_leg = {'joint': 1.}  # [N*m*s/rad]
     Cfg.control.stiffness_arm = {'joint': 5., 'widow': 5.}  # [N*m/rad]
@@ -325,7 +317,30 @@ def train_go1(headless=True):
     Cfg.asset.hip_joints = {'hip'}
     Cfg.reward_scales.hip_joint_penality = -0.1
     
-
+    Cfg.reward_scales.tracking_lin_vel = 0.
+    Cfg.reward_scales.tracking_ang_vel = 0.
+    Cfg.reward_scales.lin_vel_z = -0.0
+    Cfg.reward_scales.ang_vel_xy = -0.00
+    Cfg.reward_scales.jump = -0.00
+    Cfg.reward_scales.jump = -0.00
+    Cfg.reward_scales.hip_joint_penality = -0.
+    Cfg.reward_scales.loco_energy = -0.00004
+    Cfg.reward_scales.arm_energy = -0.00004
+    Cfg.rewards.terminal_body_height = 0.28
+    Cfg.rewards.use_terminal_body_height = True
+    Cfg.rewards.use_terminal_roll = False
+    Cfg.rewards.use_terminal_pitch = False
+    Cfg.env.keep_arm_fixed = True
+    Cfg.rewards.use_terminal_roll_pitch = False # TODO
+    Cfg.asset.render_sphere = True # NOTE no use in headless 
+    Cfg.rewards.terminal_body_roll = 0.10
+    Cfg.rewards.terminal_body_pitch = 0.1
+    Cfg.rewards.terminal_body_pitch_roll = 80./180.*torch.pi
+    Cfg.rewards.headupdown_thres = 0.1
+    Cfg.control.update_obs_freq = 50 # Hz
+    Cfg.reward_scales.arm_manip_commands_tracking_combine = 2.
+    
+    
     now = datetime.now()
     stem = Path(__file__).stem
     wandb.init(project="controller",
