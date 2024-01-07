@@ -68,3 +68,5 @@ docker/rsc
 *.jit
 tmp
 *.tar
+
+wandb/*

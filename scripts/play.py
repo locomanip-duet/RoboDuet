@@ -79,7 +79,7 @@ def load_env(label, headless=False):
 
     # load policy
     from ml_logger import logger
-    from go1_gym_learn.ppo_cse.actor_critic import ActorCritic
+    from go1_gym_learn.ppo_cse_arm.actor_critic import ActorCritic
 
     policy = load_policy(logdir)
 

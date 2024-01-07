@@ -7,7 +7,7 @@ from params_proto import PrefixProto
 
 from go1_gym_learn.ppo_cse_arm import ActorCritic
 from go1_gym_learn.ppo_cse_arm import RolloutStorage
-from go1_gym_learn.ppo_cse_arm import caches
+# from go1_gym_learn.ppo_cse_arm import caches
 
 
 class PPO_Args(PrefixProto):
@@ -79,7 +79,8 @@ class PPO:
     def process_env_step(self, rewards, dones, infos):
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
-        self.transition.env_bins = infos["env_bins"]
+        # self.transition.env_bins = infos["env_bins"]
+        self.transition.env_bins = torch.zeros(self.storage.num_envs, 1,  dtype=torch.long).to(self.device)
         # Bootstrapping on time outs
         if 'time_outs' in infos:
             self.transition.rewards += PPO_Args.gamma * torch.squeeze(

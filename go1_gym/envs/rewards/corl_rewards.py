@@ -29,12 +29,12 @@ class CoRLRewards:
     # ------------ reward functions----------------
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
-        lin_vel_error = torch.sum(torch.square(self.env.commands[:, :2] - self.env.base_lin_vel[:, :2]), dim=1)
+        lin_vel_error = torch.sum(torch.square(self.env.commands_dog[:, :2] - self.env.base_lin_vel[:, :2]), dim=1)
         return torch.exp(-lin_vel_error / self.env.cfg.rewards.tracking_sigma)
 
     def _reward_tracking_ang_vel(self):
         # Tracking of angular velocity commands (yaw)
-        ang_vel_error = torch.square(self.env.commands[:, 2] - self.env.base_ang_vel[:, 2])
+        ang_vel_error = torch.square(self.env.commands_dog[:, 2] - self.env.base_ang_vel[:, 2])
         return torch.exp(-ang_vel_error / self.env.cfg.rewards.tracking_sigma_yaw)
 
     def _reward_lin_vel_z(self):
@@ -88,7 +88,7 @@ class CoRLRewards:
     def _reward_jump(self):
         reference_heights = 0
         body_height = self.env.base_pos[:, 2] - reference_heights
-        jump_height_target = self.env.commands[:, 3] + self.env.cfg.rewards.base_height_target
+        jump_height_target = self.env.commands_dog[:, 3] + self.env.cfg.rewards.base_height_target
         reward = - torch.square(body_height - jump_height_target)
         return reward
 
@@ -155,7 +155,7 @@ class CoRLRewards:
     def _reward_feet_clearance_cmd_linear(self):
         phases = 1 - torch.abs(1.0 - torch.clip((self.env.foot_indices * 2.0) - 1.0, 0.0, 1.0) * 2.0)
         foot_height = (self.env.foot_positions[:, :, 2]).view(self.env.num_envs, -1)# - reference_heights
-        target_height = self.env.commands[:, 9].unsqueeze(1) * phases + 0.02 # offset for foot radius 2cm
+        target_height = self.env.commands_dog[:, 9].unsqueeze(1) * phases + 0.02 # offset for foot radius 2cm
         rew_foot_clearance = torch.square(target_height - foot_height) * (1 - self.env.desired_contact_states)
         return torch.sum(rew_foot_clearance, dim=1)
 
@@ -175,7 +175,7 @@ class CoRLRewards:
 
     def _reward_orientation_control(self):
         # Penalize non flat base orientation
-        roll_pitch_commands = self.env.commands[:, 10:12]
+        roll_pitch_commands = self.env.commands_dog[:, 10:12]
         quat_roll = quat_from_angle_axis(-roll_pitch_commands[:, 1],
                                          torch.tensor([1, 0, 0], device=self.env.device, dtype=torch.float))
         quat_pitch = quat_from_angle_axis(-roll_pitch_commands[:, 0],
@@ -195,14 +195,14 @@ class CoRLRewards:
 
         # nominal positions: [FR, FL, RR, RL]
         if self.env.cfg.commands.num_commands >= 13:
-            desired_stance_width = self.env.commands[:, 12:13]
+            desired_stance_width = self.env.commands_dog[:, 12:13]
             desired_ys_nom = torch.cat([desired_stance_width / 2, -desired_stance_width / 2, desired_stance_width / 2, -desired_stance_width / 2], dim=1)
         else:
             desired_stance_width = 0.3
             desired_ys_nom = torch.tensor([desired_stance_width / 2,  -desired_stance_width / 2, desired_stance_width / 2, -desired_stance_width / 2], device=self.env.device).unsqueeze(0)
 
         if self.env.cfg.commands.num_commands >= 14:
-            desired_stance_length = self.env.commands[:, 13:14]
+            desired_stance_length = self.env.commands_dog[:, 13:14]
             desired_xs_nom = torch.cat([desired_stance_length / 2, desired_stance_length / 2, -desired_stance_length / 2, -desired_stance_length / 2], dim=1)
         else:
             desired_stance_length = 0.45
@@ -210,9 +210,9 @@ class CoRLRewards:
 
         # raibert offsets
         # phases = torch.abs(1.0 - (self.env.foot_indices * 2.0)) * 1.0 - 0.5
-        # frequencies = self.env.commands[:, 4]
-        # x_vel_des = self.env.commands[:, 0:1]
-        # yaw_vel_des = self.env.commands[:, 2:3]
+        # frequencies = self.env.commands_dog[:, 4]
+        # x_vel_des = self.env.commands_dog[:, 0:1]
+        # yaw_vel_des = self.env.commands_dog[:, 2:3]
         # y_vel_des = yaw_vel_des * desired_stance_length / 2
         # desired_ys_offset = phases * y_vel_des * (0.5 / frequencies.unsqueeze(1))
         # desired_ys_offset[:, 2:4] *= -1

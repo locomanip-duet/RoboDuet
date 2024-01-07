@@ -7,12 +7,12 @@ import gym
 
 from .legged_robot import LeggedRobot, quaternion_to_rpy
 from .legged_robot_config import Cfg
-from go1_gym_learn.ppo_cse_arm.dog_ac import ActorCritic as DogAC
-from go1_gym_learn.ppo_cse_arm.arm_ac import ActorCritic as ArmAC
+# from go1_gym_learn.ppo_cse_arm.dog_ac import ActorCritic as DogAC
+from go1_gym_learn.ppo_cse_hybrid.arm_ac import ActorCritic as ArmAC
 from go1_gym.utils.math_utils import quat_apply_yaw, wrap_to_pi, get_scale_shift
 
 
-dog_model_path = "/home/pgp/hybrid/hybrid_improve_dwb/runs/use_for_hybrid/2024-01-04/train/070544.615502/dog/ac_weights_last.pt"
+# dog_model_path = "/home/pgp/hybrid/hybrid_improve_dwb/runs/use_for_hybrid/2024-01-04/train/070544.615502/dog/ac_weights_last.pt"
 arm_model_path = "/home/pgp/hybrid/hybrid_improve_dwb/runs/use_for_hybrid/2024-01-04/train/070544.615502/checkpoints/ac_weights_last.pt"
 class VelocityTrackingEasyEnv(LeggedRobot):
     def __init__(self, sim_device, headless, num_envs=None, prone=False, deploy=False,
@@ -35,7 +35,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
             "pacing": [0, 0, 0.5]}
 
         gait = torch.tensor(gaits["trotting"])
-        self.commands_dog[:, :3] = 0
+        self.commands_dog[:, 1] = 0
         self.commands_dog[:, 3] = 0
         self.commands_dog[:, 4] = step_frequency_cmd
         self.commands_dog[:, 5:8] = gait
@@ -305,15 +305,22 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                                 self.actions[:, :self.num_actions_loco]
                                 ), dim=-1)
 
-        if self.cfg.env.observe_command:
-            obs_buf = torch.cat((self.projected_gravity,
-                                    self.commands_dog * self.commands_scale_dog,
-                                    (self.dof_pos[:, :self.num_actions_loco] - self.default_dof_pos[:,
-                                                                                :self.num_actions_loco]) * self.obs_scales.dof_pos,
-                                    self.dof_vel[:, :self.num_actions_loco] * self.obs_scales.dof_vel,
-                                    self.actions[:, :self.num_actions_loco]
-                                    ), dim=-1)
-
+        # if self.cfg.env.observe_command:
+        #     obs_buf = torch.cat((self.projected_gravity,
+        #                             (self.commands_dog * self.commands_scale_dog)[:, :2],
+        #                             (self.dof_pos[:, :self.num_actions_loco] - self.default_dof_pos[:,
+        #                                                                         :self.num_actions_loco]) * self.obs_scales.dof_pos,
+        #                             self.dof_vel[:, :self.num_actions_loco] * self.obs_scales.dof_vel,
+        #                             self.actions[:, :self.num_actions_loco]
+        #                             ), dim=-1)
+        obs_buf = torch.cat(
+            (
+                obs_buf,
+                (self.commands_dog * self.commands_scale_dog)[:, :2],
+                (self.obj_obs_pose_in_ee[:]),
+                (self.obj_obs_abg_in_ee[:]),
+            ), dim=-1)
+        
         if self.cfg.env.observe_two_prev_actions:
             obs_buf = torch.cat((obs_buf,
                                     self.last_actions), dim=-1)
@@ -503,16 +510,7 @@ class HistoryWrapper(gym.Wrapper):
         
         self.arm_obs_history = torch.zeros(self.env.num_envs, self.env.cfg.plan.arm_num_obs_history, dtype=torch.float,
                                        device=self.env.device, requires_grad=False)
-        
-        self.dog_model = DogAC(
-            self.env.cfg.plan.dog_num_observations,
-            self.env.cfg.plan.dog_num_privileged_obs,
-            self.env.cfg.plan.dog_num_obs_history,
-            self.env.cfg.plan.dog_num_actions,
-        ).to(self.device)
-        weights = torch.load(dog_model_path)
-        self.dog_model.load_state_dict(state_dict=weights)
-        
+
         self.arm_model = ArmAC(
             self.env.cfg.plan.arm_num_observations,
             self.env.cfg.plan.arm_num_privileged_obs,
@@ -528,21 +526,22 @@ class HistoryWrapper(gym.Wrapper):
     def step(self, action):
         # privileged information and observation history are stored in info
         
-        self.plan(action)
+        # self.plan(action)
         
         arm_obs_dict = self.get_arm_observations()
-        dog_obs_dict = self.get_dog_observations()
+        # dog_obs_dict = self.get_dog_observations()
         
         action_arm = self.arm_model.act(arm_obs_dict['obs_history'])
-        action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
+        # action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
         
-        action = torch.concat([action_dog, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
+        action = torch.concat([action, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
         
         obs, rew, done, info = self.env.step(action)
         privileged_obs = info["privileged_obs"]
 
         self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)
-        return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}, rew, done, info
+        # return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}, rew, done, info
+        return self.get_dog_observations(), rew, done, info
 
     def get_dog_observations(self):
         obs, privileged_obs = self.env.get_dog_observations()

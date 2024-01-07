@@ -4,7 +4,7 @@ assert isaacgym
 import torch
 import argparse
 
-from go1_gym.envs.hybrid.legged_robot_config import Cfg
+from go1_gym.envs.hybrid_arm.legged_robot_config import Cfg
 from go1_gym.envs.go1.go1_config import config_go1
 
 import wandb
@@ -18,9 +18,10 @@ import pickle
 from yapf.yapflib.yapf_api import FormatCode
 
 from go1_gym_learn.ppo_cse_arm import Runner
-from go1_gym.envs.hybrid import HistoryWrapper, VelocityTrackingEasyEnv
-from go1_gym_learn.ppo_cse_arm.ppo import PPOPlanner_Args as PPO_Args
-from go1_gym_learn.ppo_cse_arm import RunnerArgs, PlannerArgs
+from go1_gym.envs.hybrid_arm import HistoryWrapper, VelocityTrackingEasyEnv
+from go1_gym_learn.ppo_cse_arm.ppo import PPO_Args
+from go1_gym_learn.ppo_cse_arm import RunnerArgs
+from go1_gym_learn.ppo_cse_arm.actor_critic import AC_Args
 
 def format_code(code_text: str):
     """Format the code text with yapf."""
@@ -136,7 +137,7 @@ def train_go1(headless=True):
     Cfg.reward_scales.base_height = 0.0
     Cfg.rewards.base_height_target = 0.30
     Cfg.reward_scales.estimation_bonus = 0.0
-    # Cfg.reward_scales.raibert_heuristic = -10.0
+    Cfg.reward_scales.raibert_heuristic = -10.0
     Cfg.reward_scales.feet_impact_vel = -0.0
     Cfg.reward_scales.feet_clearance = -0.0
     Cfg.reward_scales.feet_clearance_cmd = -0.0
@@ -146,16 +147,16 @@ def train_go1(headless=True):
     Cfg.reward_scales.tracking_stance_width = -0.0
     Cfg.reward_scales.tracking_stance_length = -0.0
     Cfg.reward_scales.lin_vel_z = -0.02
-    Cfg.reward_scales.ang_vel_xy = -0.001
+    # Cfg.reward_scales.ang_vel_xy = -0.001
     Cfg.reward_scales.feet_air_time = 0.0
     Cfg.reward_scales.hop_symmetry = 0.0
     Cfg.rewards.kappa_gait_probs = 0.07
     Cfg.rewards.gait_force_sigma = 100.
     Cfg.rewards.gait_vel_sigma = 10.
-    # Cfg.reward_scales.tracking_contacts_shaped_force = 4.0
-    # Cfg.reward_scales.tracking_contacts_shaped_vel = 4.0
-    Cfg.reward_scales.tracking_contacts_shaped_force = .0
-    Cfg.reward_scales.tracking_contacts_shaped_vel = .0
+    Cfg.reward_scales.tracking_contacts_shaped_force = 4.0
+    Cfg.reward_scales.tracking_contacts_shaped_vel = 4.0
+    # Cfg.reward_scales.tracking_contacts_shaped_force = .0
+    # Cfg.reward_scales.tracking_contacts_shaped_vel = .0
     
     Cfg.reward_scales.collision = -5.0
 
@@ -282,9 +283,10 @@ def train_go1(headless=True):
     
     Cfg.plan.dog_num_privileged_obs = 2
     Cfg.plan.dog_num_observation_history = 30
-    Cfg.plan.dog_num_observations = 70 - 12
+    Cfg.plan.dog_num_observations = 51
     Cfg.plan.dog_num_obs_history = Cfg.plan.dog_num_observations * Cfg.plan.dog_num_observation_history
     Cfg.plan.dog_num_commands = 15
+    Cfg.plan.dog_actions = 12
     
     Cfg.plan.arm_num_privileged_obs = 9
     Cfg.plan.arm_num_observation_history = 30
@@ -315,14 +317,14 @@ def train_go1(headless=True):
     Cfg.control.damping_arm = {'joint': 1, 'widow': 1,}  # [N*m*s/rad]
     Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/widowGo1/urdf/widowGo1.urdf'
     Cfg.asset.hip_joints = {'hip'}
-    Cfg.reward_scales.hip_joint_penality = -0.1
+    # Cfg.reward_scales.hip_joint_penality = -0.1
     
-    Cfg.reward_scales.tracking_lin_vel = 0.
-    Cfg.reward_scales.tracking_ang_vel = 0.
-    Cfg.reward_scales.lin_vel_z = -0.0
-    Cfg.reward_scales.ang_vel_xy = -0.00
-    Cfg.reward_scales.jump = -0.00
-    Cfg.reward_scales.jump = -0.00
+    # Cfg.reward_scales.tracking_lin_vel = 0.
+    # Cfg.reward_scales.tracking_ang_vel = 0.
+    # Cfg.reward_scales.lin_vel_z = -0.0
+    # Cfg.reward_scales.ang_vel_xy = -0.00
+    # Cfg.reward_scales.jump = -0.00
+    # Cfg.reward_scales.jump = -0.00
     Cfg.reward_scales.hip_joint_penality = -0.
     Cfg.reward_scales.loco_energy = -0.00004
     Cfg.reward_scales.arm_energy = -0.00004
@@ -388,7 +390,7 @@ def train_go1(headless=True):
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo/__init__.py", f"{wandb.run.dir}/scripts_commit/__init__.py")
         
         # 将参数保存到 runs
-        temp_dict = {"Cfg": vars(Cfg), "RunnerArgs": vars(RunnerArgs), "PlannerArgs": vars(PlannerArgs), "PPO_Args": vars(PPO_Args),}
+        temp_dict = {"Cfg": vars(Cfg), "RunnerArgs": vars(RunnerArgs), "AC_Args": vars(AC_Args), "PPO_Args": vars(PPO_Args),}
         with open(f"{args.log_dir}/params.txt", "w", encoding="utf-8") as f:
             format_temp_dict = format_code(str(temp_dict))
             f.write(format_temp_dict)
