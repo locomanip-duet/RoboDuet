@@ -3,18 +3,23 @@
 import os
 from typing import Dict
 
-from isaacgym import gymtorch, gymapi, gymutil
-from isaacgym.torch_utils import *
 import cv2
+from isaacgym import gymapi, gymtorch, gymutil
+from isaacgym.torch_utils import *
+
 assert gymtorch
-import torch
 import sys
+
+import torch
 
 from go1_gym import MINI_GYM_ROOT_DIR
 from go1_gym.envs.base.base_task import BaseTask
-from go1_gym.utils.math_utils import quat_apply_yaw, wrap_to_pi, get_scale_shift
+from go1_gym.utils.math_utils import (get_scale_shift, quat_apply_yaw,
+                                      wrap_to_pi)
 from go1_gym.utils.terrain import Terrain
+
 from .legged_robot_config import Cfg
+
 
 def quaternion_to_rpy(quaternions):
     """
@@ -160,7 +165,7 @@ class LeggedRobot(BaseTask):
         pitch = self.visual_rpy[0, -2]
         yaw   = self.visual_rpy[0, -1]
         quat_base = quat_from_euler_xyz(roll, pitch, yaw)
-        quat_world = quat_mul(self.base_quat[0:1], quat_base)
+        quat_world = quat_mul(self.base_quat[0], quat_base)
         # quat_world = quat_mul(base_quats, self.obj_quats[0])
         self.draw_coord_pos_quat(x, y, z, quat_world, )
 
@@ -175,6 +180,20 @@ class LeggedRobot(BaseTask):
         gymutil.draw_lines(axes_geom, self.gym, self.viewer, self.envs[0], axes_pose)
 
 
+    # def lpy_to_world_xyz(self):
+    #     # import ipdb; ipdb.set_trace()
+    #     l = self.commands[0, 2]
+    #     p = self.commands[0, 3]
+    #     y = self.commands[0, 4]
+
+    #     x = l * torch.cos(p) * torch.cos(y)
+    #     y = l * torch.cos(p) * torch.sin(y)
+    #     z = l * torch.sin(p)
+    #     xyz = torch.stack([x, y, z], dim=-1)
+
+    #     xyz = quat_apply(self.base_quat[0:1], xyz) + self.root_states[0:1, 0:3]
+    #     return xyz.split(1, dim=-1)
+
     def lpy_to_world_xyz(self):
         # import ipdb; ipdb.set_trace()
         l = self.commands[0, 2]
@@ -184,10 +203,14 @@ class LeggedRobot(BaseTask):
         x = l * torch.cos(p) * torch.cos(y)
         y = l * torch.cos(p) * torch.sin(y)
         z = l * torch.sin(p)
-        xyz = torch.stack([x, y, z], dim=-1)
 
-        xyz = quat_apply(self.base_quat[0:1], xyz) + self.root_states[0:1, 0:3]
-        return xyz.split(1, dim=-1)
+        forward = quat_apply(self.base_quat[0], self.forward_vec[0])
+        yaw = torch.atan2(forward[1], forward[0])
+
+        x_ = x * torch.cos(yaw) - y * torch.sin(yaw) + self.root_states[0, 0]
+        y_ = x * torch.sin(yaw) + y * torch.cos(yaw) + self.root_states[0, 1]
+        z_ = torch.mean(z + self.measured_heights) + 0.38
+        return x_, y_, z_
 
     def _lpy_to_world_xyz(self, env_ids):
         l = self.commands[env_ids, 2]
@@ -320,19 +343,23 @@ class LeggedRobot(BaseTask):
 
         # TODO
         self.reverse_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False)        
-        # roll_vec = quat_apply(self.base_quat, self.y_vector) # [0,1,0]
-        # self.roll = torch.atan2(roll_vec[:, 2], roll_vec[:, 1]) # roll angle = arctan2(z, y)
+
+        self.r, self.p, self.y = quaternion_to_rpy(self.base_quat[0:1]).split(1, dim=-1)
+        
+
+
         Righthip = self.rigid_body_state.view(self.num_envs, self.num_bodies, 13)[:, self.hip_body_indices[1::2], 0:3]
         Lefthip = self.rigid_body_state.view(self.num_envs, self.num_bodies, 13)[:, self.hip_body_indices[0::2], 0:3]
         vector = Lefthip - Righthip
         plane_l = torch.sqrt((vector[..., 0])**2 + (vector[..., 1])**2)
         self.roll = torch.mean(torch.atan2(vector[..., 2], plane_l), dim=1)
         
-        
         if self.cfg.rewards.use_terminal_roll:
             reverse_buf1 = torch.logical_and(self.roll > self.cfg.rewards.terminal_body_roll, self.commands[:, 4] > 0.0) # lpy
             reverse_buf2 = torch.logical_and(self.roll < -self.cfg.rewards.terminal_body_roll, self.commands[:, 4] < 0.0) # lpy
             self.reverse_buf |= reverse_buf1 | reverse_buf2
+
+
 
         Fhip = self.rigid_body_state.view(self.num_envs, self.num_bodies, 13)[:, self.hip_body_indices[:2], 0:3]
         Rhip = self.rigid_body_state.view(self.num_envs, self.num_bodies, 13)[:, self.hip_body_indices[2:], 0:3]
@@ -1521,6 +1548,9 @@ class LeggedRobot(BaseTask):
                                          device=self.device).squeeze(1)
             pos[1:2] += torch_rand_float(-self.cfg.terrain.y_init_range, self.cfg.terrain.y_init_range, (1, 1),
                                          device=self.device).squeeze(1)
+            
+            if self.cfg.terrain.mesh_type == 'plane':
+                pos[2:3] += self.cfg.init_state.pos[2]
             start_pose.p = gymapi.Vec3(*pos)
 
             rigid_shape_props = self._process_rigid_shape_props(rigid_shape_props_asset, i)
@@ -1568,8 +1598,8 @@ class LeggedRobot(BaseTask):
         # if recording video, set up camera
         if self.cfg.env.record_video:
             self.camera_props = gymapi.CameraProperties()
-            self.camera_props.width = 360
-            self.camera_props.height = 240
+            self.camera_props.width = 640
+            self.camera_props.height = 480
             self.rendering_camera = self.gym.create_camera_sensor(self.envs[0], self.camera_props)
             self.gym.set_camera_location(self.rendering_camera, self.envs[0], gymapi.Vec3(1.5, 1, 3.0),
                                          gymapi.Vec3(0, 0, 0))
@@ -1628,16 +1658,19 @@ class LeggedRobot(BaseTask):
                 return pos
             # put_text_func = lambda text, pos: cv2.putText(self.video_frame, text, (10, pos), font, font_scale, (0, 0, 0), 1, cv2.LINE_AA)
             
-            for i in range(len(command_ids)):
+            pos = put_text_func(f'x_vel={self.commands_dog[0, 0]:.3f}', pos)
+            pos = put_text_func(f'yaw_vel={self.commands_dog[0, 2]:.3f}', pos)
+            
+            for i in command_ids[2:]:
                 pos = put_text_func(f'{command_for_show[i]}={self.commands[0, command_ids[i]]:.3f}', pos)
 
             pos = put_text_func(f"leg kp={self.cfg.control.stiffness_leg['joint']:.1f} kd={self.cfg.control.damping_leg['joint']:.1f}", pos)
             pos = put_text_func(f"arm kp={self.cfg.control.stiffness_arm['joint']:.1f} kd={self.cfg.control.damping_arm['joint']:.1f}", pos)
             pos = put_text_func(f"base height={self.root_states[0, 2]:.3f}", pos)
-            pos = put_text_func(f"body pitch={self.pitch[0]:.3f}", pos)
             pos = put_text_func(f"delta z={self.delta_z[0]:.3f}", pos)
+            pos = put_text_func(f"body pitch={self.pitch[0]:.3f}", pos)
             pos = put_text_func(f"body roll={self.roll[0]:.3f}", pos)
-            
+            pos = put_text_func(f"new rpy = {self.r.item():3f}, {self.p.item():3f}, {self.y.item():3f}", pos)
             
             self.video_frames.append(self.video_frame)
 
@@ -1720,6 +1753,7 @@ class LeggedRobot(BaseTask):
             num_cols = np.floor(np.sqrt(len(env_ids)))
             num_rows = np.ceil(self.num_envs / num_cols)
             xx, yy = torch.meshgrid(torch.arange(num_rows), torch.arange(num_cols))
+            xx, yy = xx.to(self.device), yy.to(self.device)
             spacing = cfg.env.env_spacing
             self.env_origins[env_ids, 0] = spacing * xx.flatten()[:len(env_ids)]
             self.env_origins[env_ids, 1] = spacing * yy.flatten()[:len(env_ids)]
@@ -1843,7 +1877,7 @@ class LeggedRobot(BaseTask):
 
             for idxs in foot_indices:
                 
-                idxs[(torch.norm(self.commands_dog[:, :2], dim=1) < 0.2)] = 0.3 # mark stand
+                idxs[(torch.norm(self.commands_dog[:, :2], dim=1) < 0.2)] = 0.25 # mark stand
                 
                 
                 stance_idxs = torch.remainder(idxs, 1) < durations

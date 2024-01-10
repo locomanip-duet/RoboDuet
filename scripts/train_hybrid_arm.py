@@ -281,7 +281,7 @@ def train_go1(headless=True):
     Cfg.plan.num_actions_arm = 6
     
     
-    Cfg.plan.dog_num_privileged_obs = 2
+    Cfg.plan.dog_num_privileged_obs = 2 + 7
     Cfg.plan.dog_num_observation_history = 30
     Cfg.plan.dog_num_observations = 51
     Cfg.plan.dog_num_obs_history = Cfg.plan.dog_num_observations * Cfg.plan.dog_num_observation_history
@@ -319,29 +319,36 @@ def train_go1(headless=True):
     Cfg.asset.hip_joints = {'hip'}
     # Cfg.reward_scales.hip_joint_penality = -0.1
     
+    Cfg.terrain.mesh_type = "plane"
+    if Cfg.terrain.mesh_type == "plane":
+      Cfg.terrain.teleport_robots = False
+      
     # Cfg.reward_scales.tracking_lin_vel = 0.
     # Cfg.reward_scales.tracking_ang_vel = 0.
-    # Cfg.reward_scales.lin_vel_z = -0.0
-    # Cfg.reward_scales.ang_vel_xy = -0.00
+    Cfg.reward_scales.lin_vel_z = -0.0
+    Cfg.reward_scales.ang_vel_xy = -0.00
     # Cfg.reward_scales.jump = -0.00
-    # Cfg.reward_scales.jump = -0.00
+    Cfg.reward_scales.jump = -0.00
     Cfg.reward_scales.hip_joint_penality = -0.
     Cfg.reward_scales.loco_energy = -0.00004
     Cfg.reward_scales.arm_energy = -0.00004
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    Cfg.rewards.use_terminal_roll = False
-    Cfg.rewards.use_terminal_pitch = False
+    Cfg.rewards.use_terminal_roll = True
+    Cfg.rewards.use_terminal_pitch = True
     Cfg.env.keep_arm_fixed = True
     Cfg.rewards.use_terminal_roll_pitch = False # TODO
     Cfg.asset.render_sphere = True # NOTE no use in headless 
     Cfg.rewards.terminal_body_roll = 0.10
-    Cfg.rewards.terminal_body_pitch = 0.1
+    Cfg.rewards.terminal_body_pitch = 0.2
     Cfg.rewards.terminal_body_pitch_roll = 80./180.*torch.pi
     Cfg.rewards.headupdown_thres = 0.1
     Cfg.control.update_obs_freq = 50 # Hz
     Cfg.reward_scales.arm_manip_commands_tracking_combine = 2.
-    
+    Cfg.asset.penalize_contacts_on = [
+        # 'link'
+        "arm", "wrist", "gripper", "thigh", "calf"
+    ]
     
     now = datetime.now()
     stem = Path(__file__).stem
@@ -378,16 +385,16 @@ def train_go1(headless=True):
         os.makedirs(f"{MINI_GYM_ROOT_DIR}/tmp/deploy_model", exist_ok=True)
 
         # 将版本的 commit 代码 保存到 runs
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/train_ppo.py", f"{args.log_dir}/scripts/train_ppo.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/base/legged_robot.py", f"{args.log_dir}/scripts/legged_robot.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo/__init__.py", f"{args.log_dir}/scripts/__init__.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/train_hybrid_arm.py", f"{args.log_dir}/scripts/train_hybrid_arm.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/hybrid_arm/legged_robot.py", f"{args.log_dir}/scripts/legged_robot.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_arm/__init__.py", f"{args.log_dir}/scripts/__init__.py")
         
         
         # 将版本的 commit 代码 保存到 wandb
         os.makedirs(f"{wandb.run.dir}/scripts_commit", exist_ok=True)
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/train_ppo.py", f"{wandb.run.dir}/scripts_commit/train_ppo.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/base/legged_robot.py", f"{wandb.run.dir}/scripts_commit/legged_robot.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo/__init__.py", f"{wandb.run.dir}/scripts_commit/__init__.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/train_hybrid_arm.py", f"{wandb.run.dir}/scripts_commit/train_hybrid_arm.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/hybrid_arm/legged_robot.py", f"{wandb.run.dir}/scripts_commit/legged_robot.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_arm/__init__.py", f"{wandb.run.dir}/scripts_commit/__init__.py")
         
         # 将参数保存到 runs
         temp_dict = {"Cfg": vars(Cfg), "RunnerArgs": vars(RunnerArgs), "AC_Args": vars(AC_Args), "PPO_Args": vars(PPO_Args),}

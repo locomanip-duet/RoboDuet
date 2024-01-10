@@ -72,7 +72,7 @@ class BaseTask(gym.Env):
         self.gym.prepare_sim(self.sim)
 
         # todo: read from config
-        self.enable_viewer_sync = True
+        self.enable_viewer_sync = False
         self.viewer = None
 
         # if running with a viewer, set up keyboard shortcuts and camera

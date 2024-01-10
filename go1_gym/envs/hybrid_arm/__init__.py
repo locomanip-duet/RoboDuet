@@ -1,19 +1,21 @@
-from isaacgym import gymutil, gymapi
-from isaacgym.torch_utils import *
-import torch
-from params_proto import Meta
 from typing import Union
+
 import gym
+import torch
+from isaacgym import gymapi, gymutil
+from isaacgym.torch_utils import *
+from params_proto import Meta
+
+from go1_gym.utils.math_utils import (get_scale_shift, quat_apply_yaw,
+                                      wrap_to_pi)
+# from go1_gym_learn.ppo_cse_arm.dog_ac import ActorCritic as DogAC
+from go1_gym_learn.ppo_cse_hybrid.arm_ac import ActorCritic as ArmAC
 
 from .legged_robot import LeggedRobot, quaternion_to_rpy
 from .legged_robot_config import Cfg
-# from go1_gym_learn.ppo_cse_arm.dog_ac import ActorCritic as DogAC
-from go1_gym_learn.ppo_cse_hybrid.arm_ac import ActorCritic as ArmAC
-from go1_gym.utils.math_utils import quat_apply_yaw, wrap_to_pi, get_scale_shift
-
 
 # dog_model_path = "/home/pgp/hybrid/hybrid_improve_dwb/runs/use_for_hybrid/2024-01-04/train/070544.615502/dog/ac_weights_last.pt"
-arm_model_path = "/home/pgp/hybrid/hybrid_improve_dwb/runs/use_for_hybrid/2024-01-04/train/070544.615502/checkpoints/ac_weights_last.pt"
+arm_model_path = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/use_for_hybrid/2024-01-04/train/070544.615502/checkpoints/ac_weights_last.pt"
 class VelocityTrackingEasyEnv(LeggedRobot):
     def __init__(self, sim_device, headless, num_envs=None, prone=False, deploy=False,
                  cfg: Cfg = None, eval_cfg: Cfg = None, initial_dynamics_dict=None, physics_engine="SIM_PHYSX"):
@@ -25,9 +27,10 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         gymutil.parse_sim_config(vars(cfg.sim), sim_params)
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless, eval_cfg, initial_dynamics_dict)
 
-        footswing_height_cmd = 0.08
+        footswing_height_cmd = 0.04
         step_frequency_cmd = 3.0
-        stance_width_cmd = 0.25
+        stance_width_cmd = 0.3
+        stance_length_cmd = 0.45
         
         gaits = {"pronking": [0, 0, 0],
             "trotting": [0.5, 0, 0],
@@ -42,6 +45,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         self.commands_dog[:, 8] = 0.5
         self.commands_dog[:, 9] = footswing_height_cmd
         self.commands_dog[:, 12] = stance_width_cmd
+        self.commands_dog[:, 13] = stance_length_cmd
         
 
     def plan(self, obs):
@@ -487,6 +491,10 @@ class VelocityTrackingEasyEnv(LeggedRobot):
             privileged_obs_buf = torch.cat((privileged_obs_buf,
                                                 self.desired_contact_states), dim=-1)
 
+
+        privileged_obs_buf = torch.cat((privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
+        self.next_privileged_obs_buf = torch.cat((self.next_privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
+        
         assert privileged_obs_buf.shape[
                 1] == self.cfg.plan.dog_num_privileged_obs, f"dog num_privileged_obs ({self.cfg.plan.dog_num_privileged_obs}) != the number of privileged observations ({privileged_obs_buf.shape[1]}), you will discard data from the student!"
 
@@ -532,6 +540,26 @@ class HistoryWrapper(gym.Wrapper):
         # dog_obs_dict = self.get_dog_observations()
         
         action_arm = self.arm_model.act(arm_obs_dict['obs_history'])
+        # action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
+        
+        action = torch.concat([action, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
+        
+        obs, rew, done, info = self.env.step(action)
+        privileged_obs = info["privileged_obs"]
+
+        self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)
+        # return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}, rew, done, info
+        return self.get_dog_observations(), rew, done, info
+
+    def play(self, action):
+        # privileged information and observation history are stored in info
+        
+        # self.plan(action)
+        
+        arm_obs_dict = self.get_arm_observations()
+        # dog_obs_dict = self.get_dog_observations()
+        
+        action_arm = self.arm_model.act(arm_obs_dict['obs_history']).cpu()
         # action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
         
         action = torch.concat([action, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action

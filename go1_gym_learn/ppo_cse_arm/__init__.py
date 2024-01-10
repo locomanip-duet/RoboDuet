@@ -182,6 +182,8 @@ class Runner:
             if self.log_dir is not None:
                 ep_string = f''
                 wandb_dict = {}
+                wandb_dict["Efficiency/collect_time"] = collection_time
+                wandb_dict["Efficiency/learn_time"] = learn_time
                 self.tot_timesteps += self.num_steps_per_env * self.env.num_envs
                 self.tot_time += learn_time + collection_time
                 iteration_time = learn_time + collection_time
@@ -219,7 +221,7 @@ class Runner:
                     log_string += (f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {collection_time:.3f}s, learning {learn_time:.3f}s)\n"""
                                     f"""{'Value function loss:':>{pad}} {mean_value_loss:.8f}\n"""
                                     f"""{'Surrogate loss:':>{pad}} {mean_surrogate_loss:.8f}\n"""
-                                    # f"""{'Adaptation loss:':>{pad}} {mean_adaptation_module_loss:.8f}\n"""
+                                    f"""{'Adaptation loss:':>{pad}} {mean_adaptation_module_loss:.8f}\n"""
                                     f"""{'Mean reward (total):':>{pad}} {statistics.mean(rewbuffer):.4f}\n"""
                                     f"""{'Mean episode length:':>{pad}} {statistics.mean(lenbuffer):.4f}\n""")
                                     #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
@@ -229,8 +231,8 @@ class Runner:
                                 f"""{str.center(width, ' ')}\n\n"""
                                 f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {collection_time:.3f}s, learning {learn_time:.3f}s)\n"""
                                 f"""{'Value function loss:':>{pad}} {mean_value_loss:.8f}\n"""
-                                f"""{'Surrogate loss:':>{pad}} {mean_surrogate_loss:.8f}\n""")
-                                # f"""{'Adaptation loss:':>{pad}} {mean_adaptation_module_loss:.4f}\n""")
+                                f"""{'Surrogate loss:':>{pad}} {mean_surrogate_loss:.8f}\n"""
+                                f"""{'Adaptation loss:':>{pad}} {mean_adaptation_module_loss:.4f}\n""")
 
     
                 curr_it = it - copy.copy(self.current_learning_iteration)
