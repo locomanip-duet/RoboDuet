@@ -320,7 +320,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         obs_buf = torch.cat(
             (
                 obs_buf,
-                (self.commands_dog * self.commands_scale_dog)[:, :2],
+                (self.commands_dog * self.commands_scale_dog)[:, :3],
                 (self.commands_dog * self.commands_scale_dog)[:, 10:12],
                 # (self.obj_obs_pose_in_ee[:]),
                 # (self.obj_obs_abg_in_ee[:]),
@@ -564,8 +564,9 @@ class HistoryWrapper(gym.Wrapper):
         arm_obs_dict = self.get_arm_observations()
         # dog_obs_dict = self.get_dog_observations()
         
-        action_arm = self.arm_model.act(arm_obs_dict['obs_history']).cpu()
+        # action_arm = self.arm_model.act(arm_obs_dict['obs_history']).cpu()
         # action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
+        action_arm = self.arm_fake_actions.cpu()
         
         action = torch.concat([action, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
         

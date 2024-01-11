@@ -87,7 +87,7 @@ def load_arm_policy(Cfg):
 
     return policy
 
-label = "runs/hybrid_arm/2024-01-09/train_hybrid_arm"
+label = "runs/pretrained_dog"
 def load_env(label, headless=False):
     dirs = glob.glob(f"/home/pi7113t/controller/hybrid/walk-these-ways/{label}/*")
     # print('*'*10, dirs)
@@ -207,7 +207,7 @@ def play_go1(headless=True):
 
     num_eval_steps = 30000
 
-    x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 0., 0.0, 0
+    x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 3., 0.0, 2
     l_cmd, p_cmd, y_cmd = 0.5, 0, 0
     roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, 0
 
@@ -240,6 +240,8 @@ def play_go1(headless=True):
         env.commands_dog[:, 0] = x_vel_cmd
         env.commands_dog[:, 1] = 0
         env.commands_dog[:, 2] = yaw_vel_cmd
+        env.commands_dog[:, 10] = -0.4
+        env.commands_dog[:, 11] = 0
         env.commands[:, 2] = l_cmd
         env.commands[:, 3] = p_cmd
         env.commands[:, 4] = y_cmd

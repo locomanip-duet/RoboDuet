@@ -174,7 +174,9 @@ class CoRLRewards:
 
     def _reward_orientation_control(self):
         # Penalize non flat base orientation
+        # import ipdb; ipdb.set_trace()
         roll_pitch_commands = self.env.commands_dog[:, 10:12]
+        # print(roll_pitch_commands)
         quat_roll = quat_from_angle_axis(-roll_pitch_commands[:, 1],
                                          torch.tensor([1, 0, 0], device=self.env.device, dtype=torch.float))
         quat_pitch = quat_from_angle_axis(-roll_pitch_commands[:, 0],
@@ -202,7 +204,7 @@ class CoRLRewards:
 
         if self.env.cfg.commands.num_commands >= 14:
             desired_stance_length = self.env.commands_dog[:, 13:14]
-            desired_xs_nom = torch.cat([desired_stance_length / 2, desired_stance_length / 2, -desired_stance_length / 2, -desired_stance_length / 2], dim=1)
+            desired_xs_nom = torch.cat([desired_stance_length / 2 + 0.05, desired_stance_length / 2 + 0.05, -desired_stance_length / 2, -desired_stance_length / 2], dim=1)  # add 5cm offset
         else:
             desired_stance_length = 0.45
             desired_xs_nom = torch.tensor([desired_stance_length / 2,  desired_stance_length / 2, -desired_stance_length / 2, -desired_stance_length / 2], device=self.env.device).unsqueeze(0)

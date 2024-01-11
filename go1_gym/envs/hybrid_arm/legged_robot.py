@@ -867,6 +867,7 @@ class LeggedRobot(BaseTask):
             self.commands_dog[env_ids_in_category, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
             self.commands_dog[env_ids_in_category, 10] = torch.Tensor(new_commands[:, 3]).to(self.device)
             self.commands_dog[env_ids_in_category, 11] = torch.Tensor(new_commands[:, 4]).to(self.device)
+            # print("new_commands: ", new_commands[:, 3:5])
             
         # setting the smaller commands to zero
         self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
