@@ -321,8 +321,9 @@ class VelocityTrackingEasyEnv(LeggedRobot):
             (
                 obs_buf,
                 (self.commands_dog * self.commands_scale_dog)[:, :2],
-                (self.obj_obs_pose_in_ee[:]),
-                (self.obj_obs_abg_in_ee[:]),
+                (self.commands_dog * self.commands_scale_dog)[:, 10:12],
+                # (self.obj_obs_pose_in_ee[:]),
+                # (self.obj_obs_abg_in_ee[:]),
             ), dim=-1)
         
         if self.cfg.env.observe_two_prev_actions:
@@ -492,8 +493,8 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                                                 self.desired_contact_states), dim=-1)
 
 
-        privileged_obs_buf = torch.cat((privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
-        self.next_privileged_obs_buf = torch.cat((self.next_privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
+        # privileged_obs_buf = torch.cat((privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
+        # self.next_privileged_obs_buf = torch.cat((self.next_privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
         
         assert privileged_obs_buf.shape[
                 1] == self.cfg.plan.dog_num_privileged_obs, f"dog num_privileged_obs ({self.cfg.plan.dog_num_privileged_obs}) != the number of privileged observations ({privileged_obs_buf.shape[1]}), you will discard data from the student!"
@@ -519,14 +520,17 @@ class HistoryWrapper(gym.Wrapper):
         self.arm_obs_history = torch.zeros(self.env.num_envs, self.env.cfg.plan.arm_num_obs_history, dtype=torch.float,
                                        device=self.env.device, requires_grad=False)
 
-        self.arm_model = ArmAC(
-            self.env.cfg.plan.arm_num_observations,
-            self.env.cfg.plan.arm_num_privileged_obs,
-            self.env.cfg.plan.arm_num_obs_history,
-            self.env.cfg.plan.arm_num_actions,
-        ).to(self.device)
-        weights = torch.load(arm_model_path)
-        self.arm_model.load_state_dict(state_dict=weights)
+        # self.arm_model = ArmAC(
+        #     self.env.cfg.plan.arm_num_observations,
+        #     self.env.cfg.plan.arm_num_privileged_obs,
+        #     self.env.cfg.plan.arm_num_obs_history,
+        #     self.env.cfg.plan.arm_num_actions,
+        # ).to(self.device)
+        # weights = torch.load(arm_model_path)
+        # self.arm_model.load_state_dict(state_dict=weights)
+        
+        self.arm_fake_actions = torch.zeros(self.env.num_envs, self.env.num_actions_arm, dtype=torch.float, device=self.env.device, requires_grad=False)
+
 
     def plan(self, obs):
         return self.env.plan(obs)
@@ -536,11 +540,12 @@ class HistoryWrapper(gym.Wrapper):
         
         # self.plan(action)
         
-        arm_obs_dict = self.get_arm_observations()
+        # arm_obs_dict = self.get_arm_observations()
         # dog_obs_dict = self.get_dog_observations()
         
-        action_arm = self.arm_model.act(arm_obs_dict['obs_history'])
+        # action_arm = self.arm_model.act(arm_obs_dict['obs_history'])
         # action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
+        action_arm = self.arm_fake_actions
         
         action = torch.concat([action, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
         

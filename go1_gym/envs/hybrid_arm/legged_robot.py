@@ -266,9 +266,9 @@ class LeggedRobot(BaseTask):
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def _keep_arm_fixed(self):
-        self.dof_pos[:, self.num_actions:] = self.default_dof_pos[:, self.num_actions:]
+        self.dof_pos[:, self.num_actions_loco:] = self.default_dof_pos[:, self.num_actions_loco:]
         
-        self.dof_vel[:, self.num_actions:] = 0.
+        self.dof_vel[:, self.num_actions_loco:] = 0.
         self.gym.set_dof_state_tensor(self.sim, gymtorch.unwrap_tensor(self.dof_state))
 
     def post_physics_step(self):
@@ -842,7 +842,7 @@ class LeggedRobot(BaseTask):
             if len(success_thresholds) > 0:
                 curriculum.update(old_bins, task_rewards, success_thresholds,
                                   local_range=np.array(
-                                      [0.55, 0.55, 0.55,]))
+                                      [0.55, 0.55, 0.55, 1.0, 1.0,]))
 
         # assign resampled environments to new categories
         random_env_floats = torch.rand(len(env_ids), device=self.device)
@@ -865,6 +865,8 @@ class LeggedRobot(BaseTask):
 
             self.commands_dog[env_ids_in_category, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
             self.commands_dog[env_ids_in_category, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
+            self.commands_dog[env_ids_in_category, 10] = torch.Tensor(new_commands[:, 3]).to(self.device)
+            self.commands_dog[env_ids_in_category, 11] = torch.Tensor(new_commands[:, 4]).to(self.device)
             
         # setting the smaller commands to zero
         self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
@@ -893,7 +895,13 @@ class LeggedRobot(BaseTask):
                                                       self.cfg.commands.num_bins_vel_y),
                                                yaw_vel=(self.cfg.commands.limit_vel_yaw[0],
                                                         self.cfg.commands.limit_vel_yaw[1],
-                                                        self.cfg.commands.num_bins_vel_yaw)
+                                                        self.cfg.commands.num_bins_vel_yaw),
+                                                body_pitch=(self.cfg.commands.limit_body_pitch[0],
+                                                           self.cfg.commands.limit_body_pitch[1],
+                                                           self.cfg.commands.num_bins_body_pitch),
+                                               body_roll=(self.cfg.commands.limit_body_roll[0],
+                                                          self.cfg.commands.limit_body_roll[1],
+                                                          self.cfg.commands.num_bins_body_roll),
                                                )]
 
         if self.cfg.commands.curriculum_type == "LipschitzCurriculum":
@@ -904,10 +912,12 @@ class LeggedRobot(BaseTask):
         self.env_command_categories = np.zeros(len(env_ids), dtype=np.int)
         low = np.array(
             [self.cfg.commands.lin_vel_x[0], self.cfg.commands.lin_vel_y[0],
-             self.cfg.commands.ang_vel_yaw[0],])
+             self.cfg.commands.ang_vel_yaw[0],self.cfg.commands.body_pitch_range[0],
+             self.cfg.commands.body_roll_range[0],])
         high = np.array(
             [self.cfg.commands.lin_vel_x[1], self.cfg.commands.lin_vel_y[1],
-             self.cfg.commands.ang_vel_yaw[1],])
+             self.cfg.commands.ang_vel_yaw[1], self.cfg.commands.body_pitch_range[1],
+             self.cfg.commands.body_roll_range[1]])
         for curriculum in self.curricula:
             curriculum.set_to(low=low, high=high)
 
