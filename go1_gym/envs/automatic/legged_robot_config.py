@@ -1,40 +1,87 @@
 # License: see [LICENSE, LICENSES/legged_gym/LICENSE]
 
 from params_proto import PrefixProto, ParamsProto
-
+import torch
 
 class Cfg(PrefixProto, cli=False):
     
-    class plan(PrefixProto, cli=False):
-        num_commands = 8
-        num_privileged_obs = 2
-        num_observation_history = 30
-        num_observations = 10
-        num_splits = 10
-        
+    class hybrid(PrefixProto, cli=False):
         num_actions = 18
-        num_actions_loco = 12
+        
+        class rewards(PrefixProto, cli=False):
+            terminal_body_height = 0.28
+            use_terminal_body_height = True
+            use_terminal_roll = True
+            use_terminal_pitch = True
+            use_terminal_roll_pitch = False # TODO
+            terminal_body_roll = 0.10
+            terminal_body_pitch = 0.2
+            terminal_body_pitch_roll = 80./180.*torch.pi
+            headupdown_thres = 0.1
+            
+        class reward_scales(PrefixProto, cli=False):
+            jump = -0.00
+            # hip_joint_penality = -0.
+            loco_energy = -0.00004
+            arm_energy = -0.00004
+
+            arm_manip_commands_tracking_combine = 1.
+
+            orientation_control = -.0
+            # penalize_yaw = -0.5
+            # penalize_pitch = -0.5
+            action_smoothness_1 = -0.
+            action_smoothness_2 = -0.
+    
+
+    class arm(PrefixProto, cli=False):
         num_actions_arm = 6
-        
-        
-        dog_num_privileged_obs = 2
-        dog_num_observation_history = 30
-        dog_num_observations = 70 - 12
-        dog_num_obs_history = dog_num_observations * dog_num_observation_history
-        dog_num_commands = 15
-        dog_num_actions = 12
         
         arm_num_privileged_obs = 9
         arm_num_observation_history = 30
-        arm_num_observations = 27
+        arm_num_observations = 26
         arm_num_obs_history = arm_num_observations * arm_num_observation_history
         arm_num_commands = 6
-        arm_num_actions = 6
+        num_actions_arm_cd = 8
+        
+        class commands(PrefixProto, cli=False):
+            angle75 = torch.deg2rad(torch.tensor(75))
+            angle60 = torch.deg2rad(torch.tensor(60))
+            l = [0.3, 0.7]
+            p = [-torch.pi*0.45 , torch.pi*0.45]  # 75 
+            y = [-torch.pi/2 , torch.pi/2]
+            roll_ee = [0, torch.pi * 0.95]
+            pitch_ee = [-angle60 , angle60]
+            yaw_ee = [-angle75 , angle75]
+            
+            T_traj = [2, 3.]
+            T_force_range = [1, 4.]
+            add_force_thres = 0.3
+        
+        class obs_scales(PrefixProto, cli=False):
+            l = 1.
+            p = 1.
+            y = 1.
+            wx = 1.
+            wy = 1.
+            wz = 1.
+        
+        class control(PrefixProto, cli=False):
+            stiffness_arm = {'joint': 5., 'widow': 5.}  # [N*m/rad]
+            damping_arm = {'joint': 1, 'widow': 1,}  # [N*m*s/rad]
+        
+    class dog(PrefixProto, cli=False):
+        num_actions_loco = 12
+        dog_num_privileged_obs = 2
+        dog_num_observation_history = 30
+        dog_num_observations = 56
+        dog_num_obs_history = dog_num_observations * dog_num_observation_history
+        dog_num_commands = 5
+        dog_actions = 12
 
-        class command_limits(PrefixProto, cli=False):
-            roll = [-0.2, 0.2]
-            pitch = [-0.4, 0.4]
-
+        class control(PrefixProto, cli=False):
+            stiffness_leg = {'joint': 35.}
+            damping_leg = {'joint': 1.}
     
     class env(PrefixProto, cli=False):
         num_envs = 4096

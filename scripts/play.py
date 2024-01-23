@@ -17,8 +17,8 @@ from tqdm import tqdm
 
 from go1_gym.envs import *
 from go1_gym.envs.go1.go1_config import config_go1
-from go1_gym.envs.hybrid_arm import HistoryWrapper, VelocityTrackingEasyEnv
-from go1_gym.envs.hybrid_arm.legged_robot_config import Cfg
+from go1_gym.envs.automatic import HistoryWrapper, VelocityTrackingEasyEnv
+from go1_gym.envs.automatic.legged_robot_config import Cfg
 from go1_gym_learn.ppo_cse_arm.actor_critic import ActorCritic
 
 

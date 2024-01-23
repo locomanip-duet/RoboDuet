@@ -1,15 +1,13 @@
-# License: see [LICENSE, LICENSES/rsl_rl/LICENSE]
-
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
-import numpy as np
+import torch.optim as optim
 from params_proto import PrefixProto
 
-from go1_gym_learn.ppo import ActorCritic
-from go1_gym_learn.ppo import RolloutStorage
-from go1_gym_learn.ppo import caches
+from go1_gym_learn.ppo_cse_automatic import ArmctorCritic, RolloutStorage
+
+# from go1_gym_learn.ppo_cse_arm import caches
 
 
 class PPO_Args(PrefixProto):
@@ -29,9 +27,11 @@ class PPO_Args(PrefixProto):
     desired_kl = 0.01
     max_grad_norm = 1.
 
+    selective_adaptation_module_loss = False
+
 
 class PPO:
-    actor_critic: ActorCritic
+    actor_critic: ArmctorCritic
 
     def __init__(self, actor_critic, device='cpu'):
 
@@ -44,6 +44,9 @@ class PPO:
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=PPO_Args.learning_rate)
         self.adaptation_module_optimizer = optim.Adam(self.actor_critic.parameters(),
                                                       lr=PPO_Args.adaptation_module_learning_rate)
+        if self.actor_critic.decoder:
+            self.decoder_optimizer = optim.Adam(self.actor_critic.parameters(),
+                                                          lr=PPO_Args.adaptation_module_learning_rate)
         self.transition = RolloutStorage.Transition()
 
         self.learning_rate = PPO_Args.learning_rate
@@ -61,8 +64,8 @@ class PPO:
 
     def act(self, obs, privileged_obs, obs_history):
         # Compute the actions and values
-        self.transition.actions = self.actor_critic.act(obs, privileged_obs).detach()
-        self.transition.values = self.actor_critic.evaluate(obs, privileged_obs).detach()
+        self.transition.actions = self.actor_critic.act(obs_history).detach()
+        self.transition.values = self.actor_critic.evaluate(obs_history, privileged_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
@@ -76,7 +79,8 @@ class PPO:
     def process_env_step(self, rewards, dones, infos):
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
-        self.transition.env_bins = infos["env_bins"]
+        # self.transition.env_bins = infos["env_bins"]
+        self.transition.env_bins = torch.zeros(self.storage.num_envs, 1,  dtype=torch.long).to(self.device)
         # Bootstrapping on time outs
         if 'time_outs' in infos:
             self.transition.rewards += PPO_Args.gamma * torch.squeeze(
@@ -95,13 +99,18 @@ class PPO:
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_adaptation_module_loss = 0
+        mean_decoder_loss = 0
+        mean_decoder_loss_student = 0
+        mean_adaptation_module_test_loss = 0
+        mean_decoder_test_loss = 0
+        mean_decoder_test_loss_student = 0
         generator = self.storage.mini_batch_generator(PPO_Args.num_mini_batches, PPO_Args.num_learning_epochs)
         for obs_batch, critic_obs_batch, privileged_obs_batch, obs_history_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
             old_mu_batch, old_sigma_batch, masks_batch, env_bins_batch in generator:
 
-            self.actor_critic.act(obs_batch, privileged_obs_batch, masks=masks_batch)
+            self.actor_critic.act(obs_history_batch, masks=masks_batch)
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
-            value_batch = self.actor_critic.evaluate(critic_obs_batch, privileged_obs_batch, masks=masks_batch)
+            value_batch = self.actor_critic.evaluate(obs_history_batch, privileged_obs_batch, masks=masks_batch)
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
@@ -152,27 +161,46 @@ class PPO:
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
 
+            data_size = privileged_obs_batch.shape[0]
+            num_train = int(data_size // 5 * 4)
+
             # Adaptation module gradient step
+
             for epoch in range(PPO_Args.num_adaptation_module_substeps):
+
                 adaptation_pred = self.actor_critic.adaptation_module(obs_history_batch)
                 with torch.no_grad():
-                    adaptation_target = self.actor_critic.env_factor_encoder(privileged_obs_batch)
-                    residual = (adaptation_target - adaptation_pred).norm(dim=1)
-                    caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
-                                          sysid_residual=residual.cpu().numpy())
+                    adaptation_target = privileged_obs_batch
+                    # residual = (adaptation_target - adaptation_pred).norm(dim=1)
+                    # caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
+                    #                       sysid_residual=residual.cpu().numpy())
 
-                adaptation_loss = F.mse_loss(adaptation_pred, adaptation_target)
+                selection_indices = torch.linspace(0, adaptation_pred.shape[1]-1, steps=adaptation_pred.shape[1], dtype=torch.long)
+                if PPO_Args.selective_adaptation_module_loss:
+                    # mask out indices corresponding to swing feet
+                    selection_indices = 0
+
+                adaptation_loss = F.mse_loss(adaptation_pred[:num_train, selection_indices], adaptation_target[:num_train, selection_indices])
+                adaptation_test_loss = F.mse_loss(adaptation_pred[num_train:, selection_indices], adaptation_target[num_train:, selection_indices])
+
+
 
                 self.adaptation_module_optimizer.zero_grad()
                 adaptation_loss.backward()
                 self.adaptation_module_optimizer.step()
 
                 mean_adaptation_module_loss += adaptation_loss.item()
+                mean_adaptation_module_test_loss += adaptation_test_loss.item()
 
         num_updates = PPO_Args.num_learning_epochs * PPO_Args.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_adaptation_module_loss /= (num_updates * PPO_Args.num_adaptation_module_substeps)
+        mean_decoder_loss /= (num_updates * PPO_Args.num_adaptation_module_substeps)
+        mean_decoder_loss_student /= (num_updates * PPO_Args.num_adaptation_module_substeps)
+        mean_adaptation_module_test_loss /= (num_updates * PPO_Args.num_adaptation_module_substeps)
+        mean_decoder_test_loss /= (num_updates * PPO_Args.num_adaptation_module_substeps)
+        mean_decoder_test_loss_student /= (num_updates * PPO_Args.num_adaptation_module_substeps)
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_adaptation_module_loss
+        return mean_value_loss, mean_surrogate_loss, mean_adaptation_module_loss, mean_decoder_loss, mean_decoder_loss_student, mean_adaptation_module_test_loss, mean_decoder_test_loss, mean_decoder_test_loss_student

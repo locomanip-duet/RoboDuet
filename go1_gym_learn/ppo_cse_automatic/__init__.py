@@ -18,11 +18,12 @@ from params_proto import PrefixProto
 import wandb
 from go1_gym import MINI_GYM_ROOT_DIR
 
-from .plan_model import ActorCritic
+from .arm_ac import ArmctorCritic
 from .rollout_storage import RolloutStorage
 from .ppo import PPO
-# from go1_gym.envs.hybrid import HistoryWrapper
-
+from .dog_ac import DogActorCritic
+from go1_gym.envs.automatic import HistoryWrapper
+from go1_gym.utils import global_switch
 
 def class_to_dict(obj) -> dict:
     if not hasattr(obj, "__dict__"):
@@ -42,16 +43,6 @@ def class_to_dict(obj) -> dict:
     return result
 
 
-class DataCaches:
-    def __init__(self, curriculum_bins):
-        from go1_gym_learn.ppo.metrics_caches import DistCache, SlotCache
-
-        self.slot_cache = SlotCache(curriculum_bins)
-        self.dist_cache = DistCache()
-
-
-caches = DataCaches(1)
-
 
 class RunnerArgs(PrefixProto, cli=False):
     # runner
@@ -69,14 +60,13 @@ class RunnerArgs(PrefixProto, cli=False):
     checkpoint = -1  # -1 = last saved model
     resume_path = "/home/pi7113t/dog/dwb-wtw/runs/约束hip_newwidth/2023-12-08/train_ppo/145259.218560"  # updated from load_run and chkpt
 
-class PlannerArgs(PrefixProto, cli=False):
-    # planner
-    hidden_size = 128
-    num_commands = 2
-    num_splits = 120
-    recurrent = False
-    action_type = 'discrete'
-    resume_path = ""
+class ArmRunnerArgs(PrefixProto, cli=False):
+    resume_path = ''
+    resume = False
+    
+class DogRunnerArgs(PrefixProto, cli=False):
+    resume_path = ''
+    resume = False
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
     if iteration >= max_iterations:
@@ -97,39 +87,56 @@ class Runner:
     def __init__(self, env, device='cpu', run_name: str=None, resume=False, log_dir=None, debug=False):
 
         self.device = device
-        # self.env: HistoryWrapper = env
-        self.env = env
+        self.env: HistoryWrapper = env
         self.run_name = run_name
         self.log_dir = log_dir
         self.debug = debug
-        self.recurrent = PlannerArgs.recurrent
-        # if self.log_dir is not None:
-        #     self.artifact = wandb.Artifact("checkpoints", type="model")
-
-        actor_critic = ActorCritic(
-            num_obs=self.env.num_obs,
-            num_history_obs=self.env.cfg.env.num_history_obs,
-            hidden_size=PlannerArgs.hidden_size,
-            num_commands=PlannerArgs.num_commands,
-            num_splits=PlannerArgs.num_splits,
-            recurrent=PlannerArgs.recurrent,
-            action_type=PlannerArgs.action_type,
-            c_action_limits=self.env.cfg.plan.command_limits,
+        self.num_steps_per_env = RunnerArgs.num_steps_per_env
+        
+        self.arm_model = ArmctorCritic(
+            self.env.cfg.arm.arm_num_observations,
+            self.env.cfg.arm.arm_num_privileged_obs,
+            self.env.cfg.arm.arm_num_obs_history,
+            self.env.cfg.arm.num_actions_arm_cd,
+            device=self.device,
         ).to(self.device)
         
+        self.dog_model = DogActorCritic(
+            num_obs = self.env.cfg.dog.dog_num_observations,
+            num_privileged_obs = self.env.cfg.dog.dog_num_privileged_obs,
+            num_obs_history =  self.env.cfg.dog.dog_num_obs_history,
+            num_actions = self.env.cfg.dog.dog_actions).to(self.device)
 
-        if resume:
+        if DogRunnerArgs.resume:
             # load pretrained weights from resume_path
-            weights = torch.load(osp.join(PlannerArgs.resume_path, "checkpoints/ac_weights_last.pt"))
-            actor_critic.load_state_dict(state_dict=weights)
-            print("successfully loaded weights and curriculum !!!")
+            weights = torch.load(osp.join(DogRunnerArgs.resume_path, "checkpoints_arm/ac_weights_last.pt"))
+            self.dog_model.load_state_dict(state_dict=weights)
+            print("successfully loaded dog weights!!!")
 
-        self.alg = PPO(actor_critic, device=self.device)
-        self.num_steps_per_env = RunnerArgs.num_steps_per_env
+        if ArmRunnerArgs.resume:
+            # load pretrained weights from resume_path
+            weights = torch.load(osp.join(ArmRunnerArgs.resume_path, "checkpoints_dog/ac_weights_last.pt"))
+            self.arm_model.load_state_dict(state_dict=weights)
+            print("successfully loaded arm weights!!!")
 
-        # init storage and model
-        self.alg.init_storage(self.env.num_train_envs, self.num_steps_per_env, self.env.cfg.env.num_history_obs,
-                              num_commands=PlannerArgs.num_commands, c_actions_shape=PlannerArgs.num_splits, hxs_size=PlannerArgs.hidden_size)
+
+        self.alg_arm = PPO(self.arm_model, device=self.device)
+        self.alg_arm.init_storage(
+            self.env.num_train_envs, 
+            self.num_steps_per_env,
+            [self.env.cfg.arm.arm_num_observations],
+            [self.env.cfg.arm.arm_num_privileged_obs],
+            [self.env.cfg.arm.arm_num_obs_history],
+            [self.env.cfg.arm.num_actions_arm_cd])
+
+        self.alg_dog = PPO(self.dog_model, device=self.device)
+        self.alg_dog.init_storage(
+            self.env.num_train_envs,
+            self.num_steps_per_env,
+            [self.env.cfg.dog.dog_num_observations],
+            [self.env.cfg.dog.dog_num_privileged_obs],
+            [self.env.cfg.dog.dog_num_obs_history],
+            [self.env.cfg.dog.dog_actions])
 
         self.tot_timesteps = 0
         self.tot_time = 0
@@ -147,64 +154,68 @@ class Runner:
         # split train and test envs
         num_train_envs = self.env.num_train_envs
 
-        obs_dict = self.env.get_observations()
-        obs, privileged_obs, obs_history = obs_dict["obs"], obs_dict["privileged_obs"], obs_dict["obs_history"]
-        obs, privileged_obs, obs_history = obs.to(self.device), privileged_obs.to(self.device), obs_history.to(
+        obs_dict_arm = self.env.get_arm_observations()
+        obs_arm, privileged_obs_arm, obs_history_arm = obs_dict_arm["obs"], obs_dict_arm["privileged_obs"], obs_dict_arm["obs_history"]
+        obs_arm, privileged_obs_arm, obs_history_arm = obs_arm.to(self.device), privileged_obs_arm.to(self.device), obs_history_arm.to(
             self.device)
-        self.alg.actor_critic.train()
+        self.alg_arm.actor_critic.train()
+        self.alg_dog.actor_critic.train()
 
-        ep_infos = []
         rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
         rewbuffer_eval = deque(maxlen=100)
         lenbuffer_eval = deque(maxlen=100)
         cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
-
-        if hasattr(self.env, "curriculum"):
-            caches.__init__(curriculum_bins=len(self.env.curriculum))
+        ep_infos = []
         
-        hxs = torch.zeros((self.env.num_envs, PlannerArgs.hidden_size), dtype=torch.float, device=self.device)
-        masks = torch.ones((self.env.num_envs, 1), device=self.device)
+        mean_value_loss_arm, mean_surrogate_loss_arm, mean_adaptation_module_loss_arm = 0, 0, 0
+        mean_value_loss_dog, mean_surrogate_loss_dog, mean_adaptation_module_loss_dog = 0, 0, 0
         
         tot_iter = self.current_learning_iteration + num_learning_iterations
+        actions_arm = torch.zeros(self.env.num_envs, self.env.num_actions_arm, dtype=torch.float, device=self.device, requires_grad=False)
         for it in range(self.current_learning_iteration, tot_iter):
             start = time.time()
             # Rollout
             with torch.inference_mode():
-                for i in range(self.num_steps_per_env):
-                    if self.recurrent:
-                        origin_actions, hxs, post_actions = self.alg.act(obs[:num_train_envs], hxs[:num_train_envs], masks[:num_train_envs])
+                for i in range(self.num_steps_per_env + 1):  # 这里+1是为了保证最后一个dog step的next obs也能被处理
+
+                    if global_switch.swith_open:
+                        actions_arm = self.alg_arm.act(obs_arm[:num_train_envs], privileged_obs_arm[:num_train_envs],
+                                                    obs_history_arm[:num_train_envs])
+                        self.env.plan(actions_arm[..., -2:])
+                        
+                    dog_obs_dict = self.env.get_dog_observations()
+                    
+                    if i == 0: pass
                     else:
-                        origin_actions, hxs, post_actions = self.alg.act(obs_history[:num_train_envs], hxs[:num_train_envs], masks[:num_train_envs])
-                    # if eval_expert:
-                    #     actions_eval = self.alg.actor_critic.act_teacher(obs[num_train_envs:],
-                    #                                                      privileged_obs[num_train_envs:])
-                    # else:
-                    #     actions_eval = self.alg.actor_critic.act_student(obs[num_train_envs:],
-                    #                                                      obs_history[num_train_envs:])
-                    ret = self.env.step(post_actions)
-                    obs_dict, rewards, dones, infos = ret
-                    obs, privileged_obs, obs_history = obs_dict["obs"], obs_dict["privileged_obs"], obs_dict[
-                        "obs_history"]
+                        # use for compute last value
+                        obs_dog, privileged_obs_dog, obs_history_dog = dog_obs_dict["obs"], dog_obs_dict["privileged_obs"], dog_obs_dict["obs_history"]
+                        self.alg_dog.process_env_step(rewards_dog[:num_train_envs], dones[:num_train_envs], infos)
+                        if i == self.num_steps_per_env:
+                            break
+                    
+                    # add reward
+                    actions_dog = self.alg_dog.act(dog_obs_dict["obs"], dog_obs_dict["privileged_obs"], dog_obs_dict["obs_history"])
+                    ret = self.env.step(actions_dog, actions_arm[..., :-2])
+                    rewards_dog, rewards_arm, dones, infos = ret
+                    
+                    if global_switch.swith_open:
+                        obs_dict_arm = self.env.get_arm_observations()
+                        obs_arm, privileged_obs_arm, obs_history_arm = obs_dict_arm["obs"], obs_dict_arm["privileged_obs"], obs_dict_arm["obs_history"]
+                        
+                        obs_arm, privileged_obs_arm, obs_history_arm, rewards_dog, rewards_arm, dones = obs_arm.to(self.device), privileged_obs_arm.to(
+                            self.device), obs_history_arm.to(self.device), rewards_dog.to(self.device), rewards_arm.to(self.device), dones.to(self.device)
+                        self.alg_arm.process_env_step(rewards_arm[:num_train_envs], dones[:num_train_envs], infos)
+
                     env_ids = dones.nonzero(as_tuple=False).flatten()
                     self.env.clear_cached(env_ids)
 
-                    obs, privileged_obs, obs_history, rewards, dones = obs.to(self.device), privileged_obs.to(
-                        self.device), obs_history.to(self.device), rewards.to(self.device), dones.to(self.device)
-                    
-                    masks = 1 - dones.float()
-                    
-                    if self.recurrent:
-                        self.alg.process_env_step(obs, hxs, rewards, dones, masks, infos)  # TODO: turn to history
-                    else:
-                        self.alg.process_env_step(obs_history, hxs, rewards, dones, masks, infos)  # TODO: turn to history
-                    
                     if self.log_dir is not None:
                         if 'train/episode' in infos:
                             ep_infos.append(infos['train/episode'])
 
-                        cur_reward_sum += rewards
+                        cur_reward_sum += rewards_dog
                         cur_episode_length += 1
 
                         new_ids = (dones > 0).nonzero(as_tuple=False)
@@ -214,26 +225,32 @@ class Runner:
                         lenbuffer.extend(cur_episode_length[new_ids_train].cpu().numpy().tolist())
                         cur_reward_sum[new_ids_train] = 0
                         cur_episode_length[new_ids_train] = 0
+                   
 
                 stop = time.time()
                 collection_time = stop - start
-                
+
                 # Learning step
                 start = stop
-                self.alg.compute_returns(obs_history[:num_train_envs], hxs[:num_train_envs], masks[:num_train_envs])
+                if global_switch.swith_open:
+                    self.alg_arm.compute_returns(obs_history_arm[:num_train_envs], privileged_obs_arm[:num_train_envs])
+                self.alg_dog.compute_returns(obs_history_dog[:num_train_envs], privileged_obs_dog[:num_train_envs])
 
-            # self.env.reward_scales["tracking_lin_vel"] = custom_decay_reward_scale(it, initial_scale=1.5 * self.env.dt, final_scale=1. * self.env.dt)
-            # self.env.reward_scales["tracking_ang_vel"] = custom_decay_reward_scale(it, initial_scale=1. * self.env.dt, final_scale=0.8 * self.env.dt)
-            # self.env.reward_scales["manip_commands_tracking"] = custom_increase_reward_scale(it, initial_scale=0.2 * self.env.dt, final_scale=0.7 * self.env.dt)
-            beta = min(it / 5000, 1)
-            mean_value_loss, mean_surrogate_loss = self.alg.update()
+
+            if global_switch.swith_open:
+                mean_value_loss_arm, mean_surrogate_loss_arm, mean_adaptation_module_loss_arm, mean_decoder_loss, mean_decoder_loss_student, mean_adaptation_module_test_loss, mean_decoder_test_loss, mean_decoder_test_loss_student = self.alg_arm.update()
+            mean_value_loss_dog, mean_surrogate_loss_dog, mean_adaptation_module_loss_dog, mean_decoder_loss_dog, mean_decoder_loss_student_dog, mean_adaptation_module_test_loss_dog, mean_decoder_test_loss_dog, mean_decoder_test_loss_student_dog = self.alg_dog.update()
             stop = time.time()
             learn_time = stop - start
 
-
+            if it == 10000:
+                global_switch.open_switch()
+            
             if self.log_dir is not None:
                 ep_string = f''
                 wandb_dict = {}
+                wandb_dict["Efficiency/collect_time"] = collection_time
+                wandb_dict["Efficiency/learn_time"] = learn_time
                 self.tot_timesteps += self.num_steps_per_env * self.env.num_envs
                 self.tot_time += learn_time + collection_time
                 iteration_time = learn_time + collection_time
@@ -252,8 +269,11 @@ class Runner:
                 
                 if not self.debug:
                     # wandb_dict["Train_Loss/adaptation_loss"] = mean_adaptation_module_loss
-                    wandb_dict["Train_Loss/mean_value_loss"] = mean_value_loss
-                    wandb_dict["Train_Loss/mean_surrogate_loss"] = mean_surrogate_loss
+                    wandb_dict["Train_Loss/mean_value_loss"] = mean_value_loss_arm
+                    wandb_dict["Train_Loss/mean_surrogate_loss"] = mean_surrogate_loss_arm
+                    wandb_dict["Train_Loss/mean_value_loss_dog"] = mean_value_loss_dog
+                    wandb_dict["Train_Loss/mean_surrogate_loss_dog"] = mean_surrogate_loss_dog
+                    
             
                     if len(rewbuffer) > 0:
                         wandb_dict['Train_Total_Reward/mean_reward'] = statistics.mean(rewbuffer)
@@ -269,20 +289,27 @@ class Runner:
                 log_string += f"""\033[1m{'run_name:':>{pad}} {self.run_name}\033[0m \n"""
                 if len(rewbuffer) > 0:
                     log_string += (f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {collection_time:.3f}s, learning {learn_time:.3f}s)\n"""
-                                    f"""{'Value function loss:':>{pad}} {mean_value_loss:.8f}\n"""
-                                    f"""{'Surrogate loss:':>{pad}} {mean_surrogate_loss:.8f}\n"""
-                                    # f"""{'Adaptation loss:':>{pad}} {mean_adaptation_module_loss:.8f}\n"""
+                                    f"""{'Arm Value function loss:':>{pad}} {mean_value_loss_arm:.8f}\n"""
+                                    f"""{'Arm Surrogate loss:':>{pad}} {mean_surrogate_loss_arm:.8f}\n"""
+                                    f"""{'Arm Adaptation loss:':>{pad}} {mean_adaptation_module_loss_arm:.8f}\n"""
+                                    f"""{'Dog Value function loss:':>{pad}} {mean_value_loss_dog:.8f}\n"""
+                                    f"""{'Dog Surrogate loss:':>{pad}} {mean_surrogate_loss_dog:.8f}\n"""
+                                    f"""{'Dog Adaptation loss:':>{pad}} {mean_adaptation_module_loss_dog:.8f}\n"""
                                     f"""{'Mean reward (total):':>{pad}} {statistics.mean(rewbuffer):.4f}\n"""
                                     f"""{'Mean episode length:':>{pad}} {statistics.mean(lenbuffer):.4f}\n""")
                                     #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                                     #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
+                    
                 else:
                     log_string = (f"""{'#' * width}\n"""
                                 f"""{str.center(width, ' ')}\n\n"""
                                 f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {collection_time:.3f}s, learning {learn_time:.3f}s)\n"""
-                                f"""{'Value function loss:':>{pad}} {mean_value_loss:.8f}\n"""
-                                f"""{'Surrogate loss:':>{pad}} {mean_surrogate_loss:.8f}\n""")
-                                # f"""{'Adaptation loss:':>{pad}} {mean_adaptation_module_loss:.4f}\n""")
+                                f"""{'Arm Value function loss:':>{pad}} {mean_value_loss_arm:.8f}\n"""
+                                f"""{'Arm Surrogate loss:':>{pad}} {mean_surrogate_loss_arm:.8f}\n"""
+                                f"""{'Arm Adaptation loss:':>{pad}} {mean_adaptation_module_loss_arm:.4f}\n"""
+                                f"""{'Dog Value function loss:':>{pad}} {mean_value_loss_dog:.8f}\n"""
+                                f"""{'Dog Surrogate loss:':>{pad}} {mean_surrogate_loss_dog:.8f}\n"""
+                                f"""{'Dog Adaptation loss:':>{pad}} {mean_adaptation_module_loss_dog:.8f}\n""")
 
     
                 curr_it = it - copy.copy(self.current_learning_iteration)
@@ -300,33 +327,55 @@ class Runner:
                 self.log_video(it)
 
             if not self.debug and it % RunnerArgs.save_interval == 0:
-                self.save(it)
+                if global_switch.swith_open:
+                    self.save_arm(it)
+                self.save_dog(it)
+                
             ep_infos.clear()
 
-        self.save(it)
+        self.save_arm(it)
+        self.save_dog(it)
 
-    def save(self, it):
-        torch.save(self.alg.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints/ac_weights_{it:06d}.pt"))
-        shutil.copyfile(osp.join(self.log_dir, f"checkpoints/ac_weights_{it:06d}.pt"), 
-                        osp.join(self.log_dir, f"checkpoints/ac_weights_last.pt"))
-
-
+    def save_dog(self, it):
+        torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
+        shutil.copyfile(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"),
+            osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
+            
         path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
+        adaptation_module_dog_path = f'{path}/adaptation_module_latest_dog.jit'
+        adaptation_module_dog = copy.deepcopy(self.alg_dog.actor_critic.adaptation_module).to('cpu')
+        traced_script_adaptation_module_dog = torch.jit.script(adaptation_module_dog)
+        traced_script_adaptation_module_dog.save(adaptation_module_dog_path)
+        body_dog_path = f'{path}/body_latest_dog.jit'
+        body_model_dog = copy.deepcopy(self.alg_dog.actor_critic.actor_body).to('cpu')
+        traced_script_body_module_dog = torch.jit.script(body_model_dog)
+        traced_script_body_module_dog.save(body_dog_path)
 
-        adaptation_module_path = f'{path}/adaptation_module_latest.jit'
-        adaptation_module = copy.deepcopy(self.alg.actor_critic.adaptation_module).to('cpu')
+        # save to wandb
+        wandb.save(adaptation_module_dog_path)
+        wandb.save(body_dog_path)
+        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
+
+            
+    def save_arm(self, it):
+        torch.save(self.alg_arm.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
+        shutil.copyfile(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"), 
+                        osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
+        
+        path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
+        adaptation_module_path = f'{path}/adaptation_module_latest_arm.jit'
+        adaptation_module = copy.deepcopy(self.alg_arm.actor_critic.adaptation_module).to('cpu')
         traced_script_adaptation_module = torch.jit.script(adaptation_module)
         traced_script_adaptation_module.save(adaptation_module_path)
-
-        body_path = f'{path}/body_latest.jit'
-        body_model = copy.deepcopy(self.alg.actor_critic.actor_body).to('cpu')
+        body_path = f'{path}/body_latest_arm.jit'
+        body_model = copy.deepcopy(self.alg_arm.actor_critic.actor_body).to('cpu')
         traced_script_body_module = torch.jit.script(body_model)
         traced_script_body_module.save(body_path)
-        
-        wandb.save(osp.join(self.log_dir, f"checkpoints/ac_weights_last.pt"))
+
+        # save to wandb
         wandb.save(adaptation_module_path)
         wandb.save(body_path)
-        
+        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
 
     def save_cv(self, frames, it):
         # fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 指定编码器（此处使用MP4V编码器）
@@ -374,13 +423,13 @@ class Runner:
                 # wandb.run.summary["latest_video"] = wandb.Video(frames, fps=1 / self.env.dt, format='mp4')
 
     def get_inference_policy(self, device=None):
-        self.alg.actor_critic.eval()
+        self.alg_arm.actor_critic.eval()
         if device is not None:
-            self.alg.actor_critic.to(device)
-        return self.alg.actor_critic.act_inference
+            self.alg_arm.actor_critic.to(device)
+        return self.alg_arm.actor_critic.act_inference
 
     def get_expert_policy(self, device=None):
-        self.alg.actor_critic.eval()
+        self.alg_arm.actor_critic.eval()
         if device is not None:
-            self.alg.actor_critic.to(device)
-        return self.alg.actor_critic.act_expert
+            self.alg_arm.actor_critic.to(device)
+        return self.alg_arm.actor_critic.act_expert

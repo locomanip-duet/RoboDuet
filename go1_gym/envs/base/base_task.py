@@ -98,9 +98,9 @@ class BaseTask(gym.Env):
     def reset(self):
         """ Reset all robots"""
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
-        obs, privileged_obs, _, _, _ = self.step(
+        rwd_dog, rwd_arm, _, _ = self.step(
             torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False))
-        return obs, privileged_obs
+        return
 
     def step(self, actions):
         raise NotImplementedError

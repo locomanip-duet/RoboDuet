@@ -3,10 +3,11 @@ import numpy as np
 from go1_gym.utils.math_utils import quat_apply_yaw, wrap_to_pi, get_scale_shift
 from isaacgym.torch_utils import *
 from isaacgym import gymapi
+from go1_gym.envs.automatic.legged_robot import LeggedRobot
 
 class CoRLRewards:
     def __init__(self, env):
-        self.env = env
+        self.env: LeggedRobot = env
 
     def load_env(self, env):
         self.env = env
@@ -44,8 +45,8 @@ class CoRLRewards:
     def _reward_arm_manip_commands_tracking_combine(self):
         lpy = self.env._get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
         rpy = self.env._get_roll_pitch_yaw_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
-        lpy_error = torch.sum((torch.abs(lpy - self.env.commands[:, 2:5])) / self.env.commands_arm_lpy_range, dim=1)
-        rpy_error = torch.sum((torch.abs(rpy - self.env.commands[:, 5:8])) / self.env.commands_arm_rpy_range, dim=1)
+        lpy_error = torch.sum((torch.abs(lpy - self.env.commands_arm[:, 0:3])) / self.env.commands_arm_lpy_range, dim=1)
+        rpy_error = torch.sum((torch.abs(rpy - self.env.commands_arm[:, 3:6])) / self.env.commands_arm_rpy_range, dim=1)
         # rpy_error = torch.sum((torch.abs(self.env.commands[:, 5:8])) / self.env.commands_arm_rpy_range, dim=1)
         
         # print(f"lpy error: {lpy_error[:20]}")
@@ -88,7 +89,7 @@ class CoRLRewards:
     def _reward_jump(self):
         reference_heights = 0
         body_height = self.env.base_pos[:, 2] - reference_heights
-        jump_height_target = self.env.commands_dog[:, 3] + self.env.cfg.rewards.base_height_target
+        jump_height_target = 0. + self.env.cfg.rewards.base_height_target
         reward = - torch.square(body_height - jump_height_target)
         return reward
 
@@ -155,7 +156,7 @@ class CoRLRewards:
     def _reward_feet_clearance_cmd_linear(self):
         phases = 1 - torch.abs(1.0 - torch.clip((self.env.foot_indices * 2.0) - 1.0, 0.0, 1.0) * 2.0)
         foot_height = (self.env.foot_positions[:, :, 2]).view(self.env.num_envs, -1)# - reference_heights
-        target_height = self.env.commands_dog[:, 9].unsqueeze(1) * phases + 0.02 # offset for foot radius 2cm
+        target_height = 0.04 * phases + 0.02 # offset for foot radius 2cm
         rew_foot_clearance = torch.square(target_height - foot_height) * (1 - self.env.desired_contact_states)
         return torch.sum(rew_foot_clearance, dim=1)
 
@@ -175,7 +176,7 @@ class CoRLRewards:
     def _reward_orientation_control(self):
         # Penalize non flat base orientation
         # import ipdb; ipdb.set_trace()
-        roll_pitch_commands = self.env.commands_dog[:, 10:12]
+        roll_pitch_commands = self.env.commands_dog[:, 3:5]
         # print(roll_pitch_commands)
         quat_roll = quat_from_angle_axis(-roll_pitch_commands[:, 1],
                                          torch.tensor([1, 0, 0], device=self.env.device, dtype=torch.float))
@@ -195,29 +196,21 @@ class CoRLRewards:
                                                               cur_footsteps_translated[:, i, :])
 
         # nominal positions: [FR, FL, RR, RL]
-        if self.env.cfg.commands.num_commands >= 13:
-            desired_stance_width = self.env.commands_dog[:, 12:13]
-            desired_ys_nom = torch.cat([desired_stance_width / 2, -desired_stance_width / 2, desired_stance_width / 2, -desired_stance_width / 2], dim=1)
-        else:
-            desired_stance_width = 0.3
-            desired_ys_nom = torch.tensor([desired_stance_width / 2,  -desired_stance_width / 2, desired_stance_width / 2, -desired_stance_width / 2], device=self.env.device).unsqueeze(0)
+        desired_stance_width = 0.3
+        desired_ys_nom = torch.tensor([desired_stance_width / 2, -desired_stance_width / 2, desired_stance_width / 2, -desired_stance_width / 2], device=self.env.device).unsqueeze(0)
 
-        if self.env.cfg.commands.num_commands >= 14:
-            desired_stance_length = self.env.commands_dog[:, 13:14]
-            desired_xs_nom = torch.cat([desired_stance_length / 2 + 0.05, desired_stance_length / 2 + 0.05, -desired_stance_length / 2, -desired_stance_length / 2], dim=1)  # add 5cm offset
-        else:
-            desired_stance_length = 0.45
-            desired_xs_nom = torch.tensor([desired_stance_length / 2,  desired_stance_length / 2, -desired_stance_length / 2, -desired_stance_length / 2], device=self.env.device).unsqueeze(0)
+        desired_stance_length = 0.45
+        desired_xs_nom = torch.tensor([desired_stance_length / 2,  desired_stance_length / 2, -desired_stance_length / 2, -desired_stance_length / 2], device=self.env.device).unsqueeze(0)
 
         # raibert offsets
         phases = torch.abs(1.0 - (self.env.foot_indices * 2.0)) * 1.0 - 0.5
-        frequencies = self.env.commands_dog[:, 4]
+        frequencies = 3.
         x_vel_des = self.env.commands_dog[:, 0:1]
         yaw_vel_des = self.env.commands_dog[:, 2:3]
         y_vel_des = yaw_vel_des * desired_stance_length / 2
-        desired_ys_offset = phases * y_vel_des * (0.5 / frequencies.unsqueeze(1))
+        desired_ys_offset = phases * y_vel_des * (0.5 / frequencies)
         desired_ys_offset[:, 2:4] *= -1
-        desired_xs_offset = phases * x_vel_des * (0.5 / frequencies.unsqueeze(1))
+        desired_xs_offset = phases * x_vel_des * (0.5 / frequencies)
 
         desired_ys_nom = desired_ys_nom + desired_ys_offset
         desired_xs_nom = desired_xs_nom + desired_xs_offset

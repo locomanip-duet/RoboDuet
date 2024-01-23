@@ -2,7 +2,7 @@ from typing import Union
 
 from params_proto import Meta
 
-from go1_gym.envs.base.legged_robot_config import Cfg
+from go1_gym.envs.automatic.legged_robot_config import Cfg
 
 
 def config_go1(Cnfg: Union[Cfg, Meta]):
