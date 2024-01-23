@@ -70,3 +70,5 @@ tmp
 *.tar
 
 wandb/*
+
+*/__pycache__/*

@@ -1,7 +1,7 @@
 
 class GlobalSwitch():
     def __init__(self) -> None:
-        self.swith_flag = True
+        self.swith_flag = False
 
 
     def open_switch(self):

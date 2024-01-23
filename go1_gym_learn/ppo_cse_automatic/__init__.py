@@ -204,8 +204,7 @@ class Runner:
                         obs_dict_arm = self.env.get_arm_observations()
                         obs_arm, privileged_obs_arm, obs_history_arm = obs_dict_arm["obs"], obs_dict_arm["privileged_obs"], obs_dict_arm["obs_history"]
                         
-                        obs_arm, privileged_obs_arm, obs_history_arm, rewards_dog, rewards_arm, dones = obs_arm.to(self.device), privileged_obs_arm.to(
-                            self.device), obs_history_arm.to(self.device), rewards_dog.to(self.device), rewards_arm.to(self.device), dones.to(self.device)
+                        obs_arm, privileged_obs_arm, obs_history_arm, rewards_dog, rewards_arm, dones = obs_arm.to(self.device), privileged_obs_arm.to(self.device), obs_history_arm.to(self.device), rewards_dog.to(self.device), rewards_arm.to(self.device), dones.to(self.device)
                         self.alg_arm.process_env_step(rewards_arm[:num_train_envs], dones[:num_train_envs], infos)
 
                     env_ids = dones.nonzero(as_tuple=False).flatten()
@@ -245,6 +244,10 @@ class Runner:
 
             if it == 10000:
                 global_switch.open_switch()
+                change_setting = vars(self.env.cfg.hybrid.rewards)
+                for key, value in change_setting.items():
+                    setattr(self.cfg.rewards, key, value)
+                        
             
             if self.log_dir is not None:
                 ep_string = f''

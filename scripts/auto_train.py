@@ -109,7 +109,7 @@ def train_go1(headless=True):
                dir=f"{MINI_GYM_ROOT_DIR}")
     
     args.log_dir = osp.join(f"{MINI_GYM_ROOT_DIR}/runs/{args.run_name}", wandb.run.name)
-    args.log_dir += f'seed{args.seed}'
+    args.log_dir += f'_seed{args.seed}'
     if not args.debug:
         
         
@@ -225,7 +225,7 @@ if __name__ == '__main__':
     if args.resume:
         args.tags.append("resume")
 
-    set_seed(args.seed)
-    args.tags.append(f"seed{args.seed}")
+    args.seed = set_seed(args.seed)
+    args.tags.append(f"_seed{args.seed}")
     # to see the environment rendering, set headless=False
     train_go1(args)

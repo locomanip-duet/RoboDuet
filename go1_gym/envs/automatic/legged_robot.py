@@ -293,7 +293,7 @@ class LeggedRobot(BaseTask):
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.time_out_buf = self.episode_length_buf > self.cfg.env.max_episode_length  # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
-        if global_switch.swith_open and self.cfg.hybrid.rewards.use_terminal_body_height:
+        if self.cfg.hybrid.rewards.use_terminal_body_height:
             self.body_height_buf = torch.mean(self.root_states[:, 2].unsqueeze(1) - self.measured_heights, dim=1) \
                                    < self.cfg.hybrid.rewards.terminal_body_height
             self.reset_buf = torch.logical_or(self.body_height_buf, self.reset_buf)
@@ -302,7 +302,7 @@ class LeggedRobot(BaseTask):
         rpy = quaternion_to_rpy(self.base_quat)
         self.roll, self.pitch, self.y = rpy[:, 0], rpy[:, 1], rpy[:, 2]
         
-        if global_switch.swith_open and self.cfg.hybrid.rewards.use_terminal_roll:
+        if self.cfg.hybrid.rewards.use_terminal_roll:
             reverse_buf1 = torch.logical_and(self.roll > self.cfg.hybrid.rewards.terminal_body_roll, self.commands_arm[:, 2] > 0.0) # lpy
             reverse_buf2 = torch.logical_and(self.roll < -self.cfg.hybrid.rewards.terminal_body_roll, self.commands_arm[:, 2] < 0.0) # lpy
             self.reverse_buf |= reverse_buf1 | reverse_buf2
@@ -311,7 +311,7 @@ class LeggedRobot(BaseTask):
         l_align = self.commands_arm[:, 0]
         self.delta_z = l_align*torch.sin(p_align) + 0.38 -self.base_pos[:, 2]
         
-        if global_switch.swith_open and self.cfg.hybrid.rewards.use_terminal_pitch:
+        if self.cfg.hybrid.rewards.use_terminal_pitch:
             reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
             reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
             # filter = self.pitch < 0
@@ -319,7 +319,7 @@ class LeggedRobot(BaseTask):
             # self.reverse_buf |= filter
 
         # NOTE 如果 resample arm action 会导致出问题，身体还没矫正，因此在走到 0.6 路程的时候进行判断
-        time_exceed_half = (self.arm_time_buf / (self.T_trajs / self.dt)) > 0.65
+        time_exceed_half = (self.arm_time_buf / (self.T_trajs / self.dt)) > 0.2
         self.reverse_buf = self.reverse_buf & time_exceed_half
         self.reset_buf |= self.reverse_buf
         
