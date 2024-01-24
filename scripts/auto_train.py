@@ -38,8 +38,8 @@ def train_go1(headless=True):
     Cfg.control.control_type = "P"
     Cfg.domain_rand.added_mass_range = [-2.0, 2.0]
     Cfg.env.observe_two_prev_actions = False
-    Cfg.commands.body_roll_range = [-0.2, 0.2]
-    Cfg.commands.limit_body_roll = [-0.2, 0.2]
+    Cfg.commands.body_roll_range = [-0.4, 0.4]
+    Cfg.commands.limit_body_roll = [-0.4, 0.4]
     Cfg.commands.body_pitch_range = [-0.4, 0.4]
     Cfg.commands.limit_body_pitch = [-0.4, 0.4]
 
