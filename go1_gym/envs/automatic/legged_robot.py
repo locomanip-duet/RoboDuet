@@ -424,10 +424,11 @@ class LeggedRobot(BaseTask):
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
             adds each terms to the episode sums and to the total reward
         """
-        if global_switch.switch_open:  # hybrid mode
-            reward_scales = self.hybrid_reward_scales
-        else:
-            reward_scales = self.pretrained_reward_scales
+        # if global_switch.switch_open:  # hybrid mode
+        #     reward_scales = self.hybrid_reward_scales
+        # else:
+        #     reward_scales = self.pretrained_reward_scales
+        reward_scales = global_switch.get_reward_scales()
             
         self.rew_buf_dog[:] = 0.
         self.rew_buf_pos_dog[:] = 0.
@@ -1352,6 +1353,8 @@ class LeggedRobot(BaseTask):
             for name in
             list(self.hybrid_reward_scales.keys()) + ["lin_vel_raw", "ang_vel_raw", "lin_vel_residual", "ang_vel_residual",
                                                "ep_timesteps"]}
+
+        global_switch.set_reward_scales(self.hybrid_reward_scales, self.pretrained_reward_scales)
 
     def _create_ground_plane(self):
         """ Adds a ground plane to the simulation, sets friction and restitution based on the cfg.

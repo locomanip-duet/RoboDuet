@@ -23,7 +23,6 @@ from go1_gym.utils import global_switch
 from .arm_ac import ArmctorCritic
 from .dog_ac import DogActorCritic
 from .ppo import PPO
-from .rollout_storage import RolloutStorage
 
 
 def class_to_dict(obj) -> dict:
@@ -242,8 +241,10 @@ class Runner:
             mean_value_loss_dog, mean_surrogate_loss_dog, mean_adaptation_module_loss_dog, mean_decoder_loss_dog, mean_decoder_loss_student_dog, mean_adaptation_module_test_loss_dog, mean_decoder_test_loss_dog, mean_decoder_test_loss_student_dog = self.alg_dog.update()
             stop = time.time()
             learn_time = stop - start
+            
+            global_switch.count += 1
 
-            if it == 10000:
+            if it == global_switch.pretrained_to_hybrid_start:
                 global_switch.open_switch()
                 change_setting = vars(self.env.cfg.hybrid.rewards)
                 for key, value in change_setting.items():

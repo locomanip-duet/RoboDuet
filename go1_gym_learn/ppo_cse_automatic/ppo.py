@@ -5,8 +5,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from params_proto import PrefixProto
 
-from go1_gym_learn.ppo_cse_automatic import ArmctorCritic, RolloutStorage
-
+# from go1_gym_learn.ppo_cse_automatic import ArmctorCritic, RolloutStorage
+from .arm_ac import ArmctorCritic
+from .rollout_storage import RolloutStorage
 # from go1_gym_learn.ppo_cse_arm import caches
 
 
