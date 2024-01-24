@@ -22,15 +22,12 @@ class Cfg(PrefixProto, cli=False):
         class reward_scales(PrefixProto, cli=False):
             jump = -0.00
             # hip_joint_penality = -0.
-
-
             arm_manip_commands_tracking_combine = 1.
-
             orientation_control = -.0
             # penalize_yaw = -0.5
             # penalize_pitch = -0.5
-            action_smoothness_1 = -0.
-            action_smoothness_2 = -0.
+            # action_smoothness_1 = -0.
+            # action_smoothness_2 = -0.
     
 
     class arm(PrefixProto, cli=False):
@@ -73,7 +70,7 @@ class Cfg(PrefixProto, cli=False):
         num_actions_loco = 12
         dog_num_privileged_obs = 2
         dog_num_observation_history = 30
-        dog_num_observations = 48
+        dog_num_observations = 56
         dog_num_obs_history = dog_num_observations * dog_num_observation_history
         dog_num_commands = 5
         dog_actions = 12
@@ -443,8 +440,8 @@ class Cfg(PrefixProto, cli=False):
         gait_phase_cmd = 1.0
         gait_freq_cmd = 1.0
         footswing_height_cmd = 0.15
-        body_pitch_cmd = 0.3
-        body_roll_cmd = 0.3
+        body_pitch_cmd = 1.
+        body_roll_cmd = 1.
         aux_reward_cmd = 1.0
         compliance_cmd = 1.0
         stance_width_cmd = 1.0

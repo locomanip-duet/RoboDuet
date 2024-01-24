@@ -61,11 +61,11 @@ class RunnerArgs(PrefixProto, cli=False):
     resume_path = "/home/pi7113t/dog/dwb-wtw/runs/约束hip_newwidth/2023-12-08/train_ppo/145259.218560"  # updated from load_run and chkpt
 
 class ArmRunnerArgs(PrefixProto, cli=False):
-    resume_path = ''
+    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-24/auto_train/091933.229177_seed2707/checkpoints_arm/ac_weights_last_arm.pt'
     resume = False
     
 class DogRunnerArgs(PrefixProto, cli=False):
-    resume_path = ''
+    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-24/auto_train/091933.229177_seed2707/checkpoints_dog/ac_weights_last_dog.pt'
     resume = False
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
@@ -109,13 +109,13 @@ class Runner:
 
         if DogRunnerArgs.resume:
             # load pretrained weights from resume_path
-            weights = torch.load(osp.join(DogRunnerArgs.resume_path, "checkpoints_arm/ac_weights_last.pt"))
+            weights = torch.load(DogRunnerArgs.resume_path)
             self.dog_model.load_state_dict(state_dict=weights)
             print("successfully loaded dog weights!!!")
 
         if ArmRunnerArgs.resume:
             # load pretrained weights from resume_path
-            weights = torch.load(osp.join(ArmRunnerArgs.resume_path, "checkpoints_dog/ac_weights_last.pt"))
+            weights = torch.load(ArmRunnerArgs.resume_path)
             self.arm_model.load_state_dict(state_dict=weights)
             print("successfully loaded arm weights!!!")
 
@@ -344,7 +344,7 @@ class Runner:
     def save_dog(self, it):
         torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"),
-            osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
+            osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
             
         path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
         adaptation_module_dog_path = f'{path}/adaptation_module_latest_dog.jit'
@@ -359,13 +359,13 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_dog_path)
         wandb.save(body_dog_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
 
             
     def save_arm(self, it):
         torch.save(self.alg_arm.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"), 
-                        osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
+                        osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
         
         path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
         adaptation_module_path = f'{path}/adaptation_module_latest_arm.jit'
@@ -380,7 +380,7 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_path)
         wandb.save(body_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
 
     def save_cv(self, frames, it):
         # fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 指定编码器（此处使用MP4V编码器）

@@ -7,7 +7,7 @@ class GlobalSwitch():
         self.pretrained_reward_scales = None
         
         self.pretrained_to_hybrid_start = 10000
-        self.pretrained_to_hybrid_end = 12000
+        self.pretrained_to_hybrid_end = self.pretrained_to_hybrid_start + 2000
         
     def set_reward_scales(self, hybrid_reward_scales, pretrained_reward_scales):
         self.hybrid_reward_scales = hybrid_reward_scales

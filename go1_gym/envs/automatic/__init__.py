@@ -158,10 +158,10 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         obs_buf = torch.cat(
             (obs_buf,
                 (self.commands_dog * self.commands_scale_dog)[:, :5],
-                # (self.obj_obs_pose_in_ee[:]) if global_switch.swith_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
-                # (self.obj_obs_abg_in_ee[:]) if global_switch.swith_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
-                # roll.unsqueeze(1),
-                # pitch.unsqueeze(1),
+                (self.obj_obs_pose_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
+                (self.obj_obs_abg_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
+                roll.unsqueeze(1),
+                pitch.unsqueeze(1),
             ), dim=-1)
         
         if self.cfg.env.observe_two_prev_actions:
