@@ -2,16 +2,17 @@ from typing import Union
 
 import gym
 import torch
+from isaacgym import gymapi, gymtorch, gymutil
 from isaacgym.torch_utils import *
 from params_proto import Meta
-from isaacgym import gymapi, gymtorch, gymutil
 
+from go1_gym.utils.global_switch import global_switch
 from go1_gym.utils.math_utils import (get_scale_shift, quat_apply_yaw,
                                       wrap_to_pi)
 
 from .legged_robot import LeggedRobot, quaternion_to_rpy
 from .legged_robot_config import Cfg
-from go1_gym.utils.global_switch import global_switch
+
 
 class VelocityTrackingEasyEnv(LeggedRobot):
     def __init__(self, sim_device, headless, num_envs=None, prone=False, deploy=False,
@@ -157,10 +158,10 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         obs_buf = torch.cat(
             (obs_buf,
                 (self.commands_dog * self.commands_scale_dog)[:, :5],
-                (self.obj_obs_pose_in_ee[:]),
-                (self.obj_obs_abg_in_ee[:]),
-                roll.unsqueeze(1),
-                pitch.unsqueeze(1),
+                # (self.obj_obs_pose_in_ee[:]) if global_switch.swith_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
+                # (self.obj_obs_abg_in_ee[:]) if global_switch.swith_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
+                # roll.unsqueeze(1),
+                # pitch.unsqueeze(1),
             ), dim=-1)
         
         if self.cfg.env.observe_two_prev_actions:
@@ -363,7 +364,7 @@ class HistoryWrapper(gym.Wrapper):
 
     def step(self, action_dog, action_arm):
 
-        if not global_switch.swith_open:
+        if not global_switch.switch_open:
             action_arm = self.arm_fake_actions
         
         action = torch.concat([action_dog, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action

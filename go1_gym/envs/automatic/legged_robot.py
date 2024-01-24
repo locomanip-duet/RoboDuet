@@ -14,12 +14,12 @@ import torch
 
 from go1_gym import MINI_GYM_ROOT_DIR
 from go1_gym.envs.base.base_task import BaseTask
+from go1_gym.utils import global_switch, quaternion_to_rpy
 from go1_gym.utils.math_utils import (get_scale_shift, quat_apply_yaw,
                                       wrap_to_pi)
 from go1_gym.utils.terrain import Terrain
 
 from .legged_robot_config import Cfg
-from go1_gym.utils import quaternion_to_rpy, global_switch
 
 
 class LeggedRobot(BaseTask):
@@ -221,7 +221,7 @@ class LeggedRobot(BaseTask):
         return self.rew_buf_dog, self.rew_buf_arm, self.reset_buf, self.extras
 
     def _keep_arm_fixed(self):
-        if global_switch.swith_open:
+        if global_switch.switch_open:
             idx = self.num_actions_loco + self.num_actions_arm
         else:
             idx = self.num_actions_loco
@@ -293,35 +293,36 @@ class LeggedRobot(BaseTask):
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.time_out_buf = self.episode_length_buf > self.cfg.env.max_episode_length  # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
-        if self.cfg.hybrid.rewards.use_terminal_body_height:
+        if self.cfg.rewards.use_terminal_body_height:
             self.body_height_buf = torch.mean(self.root_states[:, 2].unsqueeze(1) - self.measured_heights, dim=1) \
-                                   < self.cfg.hybrid.rewards.terminal_body_height
+                                   < self.cfg.rewards.terminal_body_height
             self.reset_buf = torch.logical_or(self.body_height_buf, self.reset_buf)
 
         self.reverse_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False)        
         rpy = quaternion_to_rpy(self.base_quat)
         self.roll, self.pitch, self.y = rpy[:, 0], rpy[:, 1], rpy[:, 2]
         
-        if self.cfg.hybrid.rewards.use_terminal_roll:
+        if global_switch.switch_open and self.cfg.hybrid.rewards.use_terminal_roll:
             reverse_buf1 = torch.logical_and(self.roll > self.cfg.hybrid.rewards.terminal_body_roll, self.commands_arm[:, 2] > 0.0) # lpy
             reverse_buf2 = torch.logical_and(self.roll < -self.cfg.hybrid.rewards.terminal_body_roll, self.commands_arm[:, 2] < 0.0) # lpy
             self.reverse_buf |= reverse_buf1 | reverse_buf2
-
+            
         p_align = self.commands_arm[:, 1]
         l_align = self.commands_arm[:, 0]
         self.delta_z = l_align*torch.sin(p_align) + 0.38 -self.base_pos[:, 2]
         
-        if self.cfg.hybrid.rewards.use_terminal_pitch:
+        if global_switch.switch_open and self.cfg.hybrid.rewards.use_terminal_pitch:
             reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
             reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
             # filter = self.pitch < 0
             self.reverse_buf |= reverse_buf3 | reverse_buf4 
             # self.reverse_buf |= filter
 
-        # NOTE 如果 resample arm action 会导致出问题，身体还没矫正，因此在走到 0.6 路程的时候进行判断
-        time_exceed_half = (self.arm_time_buf / (self.T_trajs / self.dt)) > 0.2
-        self.reverse_buf = self.reverse_buf & time_exceed_half
-        self.reset_buf |= self.reverse_buf
+        if global_switch.switch_open:
+            # NOTE 如果 resample arm action 会导致出问题，身体还没矫正，因此在走到 0.6 路程的时候进行判断
+            time_exceed_half = (self.arm_time_buf / (self.T_trajs / self.dt)) > 0.2
+            self.reverse_buf = self.reverse_buf & time_exceed_half
+            self.reset_buf |= self.reverse_buf
         
     def _quat_to_angle(self, quat):
         quat = quat.to(self.device)
@@ -423,7 +424,7 @@ class LeggedRobot(BaseTask):
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
             adds each terms to the episode sums and to the total reward
         """
-        if global_switch.swith_open:  # hybrid mode
+        if global_switch.switch_open:  # hybrid mode
             reward_scales = self.hybrid_reward_scales
         else:
             reward_scales = self.pretrained_reward_scales
@@ -462,7 +463,7 @@ class LeggedRobot(BaseTask):
             self.rew_buf_dog[:] = torch.clip(self.rew_buf_dog[:], min=0.)
             self.rew_buf_arm[:] = torch.clip(self.rew_buf_arm[:], min=0.)
         elif self.cfg.rewards.only_positive_rewards_ji22_style: #TODO: update
-            self.rew_buf_dog[:] = self.rew_buf_pos_dog[:] * torch.exp(self.rew_buf_pos_dog[:] / self.cfg.rewards.sigma_rew_neg)
+            self.rew_buf_dog[:] = self.rew_buf_pos_dog[:] * torch.exp(self.rew_buf_neg_dog[:] / self.cfg.rewards.sigma_rew_neg)
             self.rew_buf_arm[:] = self.rew_buf_pos_arm[:] * torch.exp(self.rew_buf_neg_arm[:] / self.cfg.rewards.sigma_rew_neg)
         
         self.episode_sums["total"] += self.rew_buf_dog
@@ -470,7 +471,7 @@ class LeggedRobot(BaseTask):
         # add termination reward after clipping
         if "termination" in reward_scales:
             rew = self.reward_container._reward_termination() * reward_scales["termination"]
-            self.rew_buf_d += rew
+            self.rew_buf_dog += rew
             self.rew_buf_arm += rew
             self.episode_sums["termination"] += rew
             self.command_sums["termination"] += rew
@@ -723,7 +724,7 @@ class LeggedRobot(BaseTask):
     def _resample_arm_commands(self, env_ids):
         
         if len(env_ids) == 0: return
-        if not global_switch.swith_open: return
+        if not global_switch.switch_open: return
         self.commands_arm[env_ids, 0] = torch_rand_float(self.cfg.arm.commands.l[0], self.cfg.arm.commands.l[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         self.commands_arm[env_ids, 1] = torch_rand_float(self.cfg.arm.commands.p[0], self.cfg.arm.commands.p[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         self.commands_arm[env_ids, 2] = torch_rand_float(self.cfg.arm.commands.y[0], self.cfg.arm.commands.y[1], (env_ids.shape[0], 1), device=self.device).squeeze()
@@ -784,8 +785,7 @@ class LeggedRobot(BaseTask):
         old_bins = self.env_command_bins[env_ids.cpu().numpy()]
         if len(success_thresholds) > 0:
             curriculum.update(old_bins, task_rewards, success_thresholds,
-                                local_range=np.array(
-                                    [0.55, 0.55, 0.55, 1.0, 1.0,]))
+                                local_range=np.array([0.55, 0.55, 0.55, 1.0, 1.0,]))
 
         # sample from new category curricula
         new_commands, new_bin_inds = curriculum.sample(batch_size=len(env_ids))
@@ -795,7 +795,10 @@ class LeggedRobot(BaseTask):
 
         self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
         self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
-        if not global_switch.swith_open:
+        # self.commands_dog[env_ids, 0] = 0.
+        # self.commands_dog[env_ids, 2] = 0.
+        
+        if not global_switch.switch_open:
             self.commands_dog[env_ids, 3] = torch.Tensor(new_commands[:, 3]).to(self.device)
             self.commands_dog[env_ids, 4] = torch.Tensor(new_commands[:, 4]).to(self.device)
             
@@ -1210,8 +1213,7 @@ class LeggedRobot(BaseTask):
 
         self.commands_dog = torch.zeros(self.num_envs, self.cfg.dog.dog_num_commands, dtype=torch.float,
                                           device=self.device, requires_grad=False)  # x vel, y vel, yaw vel, heading
-        self.commands_scale_dog = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel,
-                                            self.obs_scales.body_pitch_cmd, self.obs_scales.body_roll_cmd], device=self.device, requires_grad=False, )[:self.cfg.dog.dog_num_commands]
+        self.commands_scale_dog = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel, self.obs_scales.body_pitch_cmd, self.obs_scales.body_roll_cmd], device=self.device, requires_grad=False, )[:self.cfg.dog.dog_num_commands]
         self.rew_buf_dog = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         self.rew_buf_pos_dog = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         self.rew_buf_neg_dog = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
@@ -1802,7 +1804,7 @@ class LeggedRobot(BaseTask):
 
         for idxs in foot_indices:
             
-            idxs[(torch.norm(self.commands_dog[:, :2], dim=1) < 0.2)] = 0.25 # mark stand
+            idxs[(torch.norm(self.commands_dog[:, :2], dim=1) < 0.1)] = 0.25 # mark stand
             
             
             stance_idxs = torch.remainder(idxs, 1) < durations

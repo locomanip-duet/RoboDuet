@@ -17,13 +17,14 @@ from params_proto import PrefixProto
 
 import wandb
 from go1_gym import MINI_GYM_ROOT_DIR
-
-from .arm_ac import ArmctorCritic
-from .rollout_storage import RolloutStorage
-from .ppo import PPO
-from .dog_ac import DogActorCritic
 from go1_gym.envs.automatic import HistoryWrapper
 from go1_gym.utils import global_switch
+
+from .arm_ac import ArmctorCritic
+from .dog_ac import DogActorCritic
+from .ppo import PPO
+from .rollout_storage import RolloutStorage
+
 
 def class_to_dict(obj) -> dict:
     if not hasattr(obj, "__dict__"):
@@ -180,7 +181,7 @@ class Runner:
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env + 1):  # 这里+1是为了保证最后一个dog step的next obs也能被处理
 
-                    if global_switch.swith_open:
+                    if global_switch.switch_open:
                         actions_arm = self.alg_arm.act(obs_arm[:num_train_envs], privileged_obs_arm[:num_train_envs],
                                                     obs_history_arm[:num_train_envs])
                         self.env.plan(actions_arm[..., -2:])
@@ -200,7 +201,7 @@ class Runner:
                     ret = self.env.step(actions_dog, actions_arm[..., :-2])
                     rewards_dog, rewards_arm, dones, infos = ret
                     
-                    if global_switch.swith_open:
+                    if global_switch.switch_open:
                         obs_dict_arm = self.env.get_arm_observations()
                         obs_arm, privileged_obs_arm, obs_history_arm = obs_dict_arm["obs"], obs_dict_arm["privileged_obs"], obs_dict_arm["obs_history"]
                         
@@ -231,12 +232,12 @@ class Runner:
 
                 # Learning step
                 start = stop
-                if global_switch.swith_open:
+                if global_switch.switch_open:
                     self.alg_arm.compute_returns(obs_history_arm[:num_train_envs], privileged_obs_arm[:num_train_envs])
                 self.alg_dog.compute_returns(obs_history_dog[:num_train_envs], privileged_obs_dog[:num_train_envs])
 
 
-            if global_switch.swith_open:
+            if global_switch.switch_open:
                 mean_value_loss_arm, mean_surrogate_loss_arm, mean_adaptation_module_loss_arm, mean_decoder_loss, mean_decoder_loss_student, mean_adaptation_module_test_loss, mean_decoder_test_loss, mean_decoder_test_loss_student = self.alg_arm.update()
             mean_value_loss_dog, mean_surrogate_loss_dog, mean_adaptation_module_loss_dog, mean_decoder_loss_dog, mean_decoder_loss_student_dog, mean_adaptation_module_test_loss_dog, mean_decoder_test_loss_dog, mean_decoder_test_loss_student_dog = self.alg_dog.update()
             stop = time.time()
@@ -246,7 +247,7 @@ class Runner:
                 global_switch.open_switch()
                 change_setting = vars(self.env.cfg.hybrid.rewards)
                 for key, value in change_setting.items():
-                    setattr(self.cfg.rewards, key, value)
+                    setattr(self.env.cfg.rewards, key, value)
                         
             
             if self.log_dir is not None:
@@ -330,7 +331,7 @@ class Runner:
                 self.log_video(it)
 
             if not self.debug and it % RunnerArgs.save_interval == 0:
-                if global_switch.swith_open:
+                if global_switch.switch_open:
                     self.save_arm(it)
                 self.save_dog(it)
                 

@@ -38,10 +38,12 @@ def train_go1(headless=True):
     Cfg.control.control_type = "P"
     Cfg.domain_rand.added_mass_range = [-2.0, 2.0]
     Cfg.env.observe_two_prev_actions = False
-    Cfg.commands.body_roll_range = [-0.4, 0.4]
+    Cfg.commands.body_roll_range = [-0.2, 0.2]
+    Cfg.commands.limit_body_roll = [-0.2, 0.2]
     Cfg.commands.body_pitch_range = [-0.4, 0.4]
-    Cfg.commands.limit_body_roll = [-0.4, 0.4]
     Cfg.commands.limit_body_pitch = [-0.4, 0.4]
+
+    Cfg.env.num_envs = args.num_envs
 
     Cfg.env.keep_arm_fixed = True
     Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/widowGo1/urdf/widowGo1.urdf'
@@ -55,15 +57,23 @@ def train_go1(headless=True):
     
     Cfg.terrain.mesh_type = "plane"
     if Cfg.terrain.mesh_type == "plane":
-      Cfg.terrain.teleport_robots = False
+        Cfg.terrain.teleport_robots = False
     Cfg.control.update_obs_freq = 50 # Hz
     Cfg.env.num_actions = 18
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
-    
+    Cfg.reward_scales.arm_energy = -0.00004
+    Cfg.reward_scales.loco_energy = -0.00004
+
+    Cfg.reward_scales.jump = -0.00
+    Cfg.rewards.terminal_body_height = 0.28
+    Cfg.rewards.use_terminal_body_height = True
+
+            
     Cfg.asset.penalize_contacts_on = [
-        'base', 'trunk', "arm", "wrist",
+        # 'base', 'trunk',
+        "arm", "wrist",
         "gripper", "thigh", "calf"]
     
     Cfg.asset.render_sphere = True # NOTE no use in headless 

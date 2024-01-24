@@ -22,8 +22,7 @@ class Cfg(PrefixProto, cli=False):
         class reward_scales(PrefixProto, cli=False):
             jump = -0.00
             # hip_joint_penality = -0.
-            loco_energy = -0.00004
-            arm_energy = -0.00004
+
 
             arm_manip_commands_tracking_combine = 1.
 
@@ -74,7 +73,7 @@ class Cfg(PrefixProto, cli=False):
         num_actions_loco = 12
         dog_num_privileged_obs = 2
         dog_num_observation_history = 30
-        dog_num_observations = 56
+        dog_num_observations = 48
         dog_num_obs_history = dog_num_observations * dog_num_observation_history
         dog_num_commands = 5
         dog_actions = 12
