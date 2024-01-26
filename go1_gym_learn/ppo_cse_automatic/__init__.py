@@ -65,8 +65,8 @@ class ArmRunnerArgs(PrefixProto, cli=False):
     resume = False
     
 class DogRunnerArgs(PrefixProto, cli=False):
-    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-24/auto_train/091933.229177_seed2707/checkpoints_dog/ac_weights_last_dog.pt'
-    resume = False
+    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-25/auto_train/102118.186807_seed493/checkpoints_dog/ac_weights_009600.pt'
+    resume = True
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
     if iteration >= max_iterations:
@@ -197,6 +197,7 @@ class Runner:
                     
                     # add reward
                     actions_dog = self.alg_dog.act(dog_obs_dict["obs"], dog_obs_dict["privileged_obs"], dog_obs_dict["obs_history"])
+                    
                     ret = self.env.step(actions_dog, actions_arm[..., :-2])
                     rewards_dog, rewards_arm, dones, infos = ret
                     

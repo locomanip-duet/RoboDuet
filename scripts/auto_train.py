@@ -193,7 +193,6 @@ def train_go1(headless=True):
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", policy="now")
         
 
-    
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)
     gpu_id = args.sim_device.split(":")[-1]

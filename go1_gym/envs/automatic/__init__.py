@@ -373,26 +373,13 @@ class HistoryWrapper(gym.Wrapper):
 
         return rew_dog, rew_arm, done, info
 
-    def play(self, action):
-        # privileged information and observation history are stored in info
-        
-        # self.plan(action)
-        
-        arm_obs_dict = self.get_arm_observations()
-        # dog_obs_dict = self.get_dog_observations()
-        
-        # action_arm = self.arm_model.act(arm_obs_dict['obs_history']).cpu()
-        # action_dog = self.dog_model.act(dog_obs_dict['obs_history'])
-        action_arm = self.arm_fake_actions.cpu()
-        
-        action = torch.concat([action, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
-        
-        obs, rew, done, info = self.env.step(action)
-        privileged_obs = info["privileged_obs"]
+    def play(self, action_dog, action_arm):
 
-        self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)
-        # return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}, rew, done, info
-        return self.get_dog_observations(), rew, done, info
+        action = torch.concat([action_dog, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
+        
+        rew_dog, rew_arm, done, info = self.env.step(action)
+
+        return rew_dog, rew_arm, done, info
 
     def get_dog_observations(self):
         obs, privileged_obs = self.env.get_dog_observations()

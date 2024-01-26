@@ -312,8 +312,8 @@ class LeggedRobot(BaseTask):
         self.delta_z = l_align*torch.sin(p_align) + 0.38 -self.base_pos[:, 2]
         
         if global_switch.switch_open and self.cfg.hybrid.rewards.use_terminal_pitch:
-            reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
-            reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
             # filter = self.pitch < 0
             self.reverse_buf |= reverse_buf3 | reverse_buf4 
             # self.reverse_buf |= filter
@@ -1690,6 +1690,7 @@ class LeggedRobot(BaseTask):
         self.dt = self.cfg.control.decimation * self.sim_params.dt
         self.obs_scales = self.cfg.obs_scales
         self.pretrained_reward_scales = vars(self.cfg.reward_scales)
+        print(type(self.cfg.reward_scales), type(self.cfg.hybrid.reward_scales))
         self.hybrid_reward_scales = vars(self.cfg.hybrid.reward_scales)
         self.curriculum_thresholds = vars(self.cfg.curriculum_thresholds)
         
