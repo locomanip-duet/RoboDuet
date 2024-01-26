@@ -28,7 +28,8 @@ class Cfg(PrefixProto, cli=False):
             # penalize_pitch = -0.5
             # action_smoothness_1 = -0.
             # action_smoothness_2 = -0.
-    
+            hip_action_l2 = -0.01
+            raibert_heuristic = -0.0
 
     class arm(PrefixProto, cli=False):
         num_actions_arm = 6

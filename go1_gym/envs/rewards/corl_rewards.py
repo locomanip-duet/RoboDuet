@@ -55,6 +55,10 @@ class CoRLRewards:
         
         return torch.exp(-(6*lpy_error + rpy_error))
 
+    def _reward_hip_action_l2(self):
+        action_l2 = torch.sum(self.env.actions[:, [0, 3, 6, 9]] ** 2, dim=1)
+        return action_l2
+
     def _reward_ang_vel_xy(self):
         # Penalize xy axes base angular velocity
         return torch.sum(torch.square(self.env.base_ang_vel[:, :2]), dim=1)
