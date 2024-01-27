@@ -65,7 +65,7 @@ class ArmRunnerArgs(PrefixProto, cli=False):
     resume = False
     
 class DogRunnerArgs(PrefixProto, cli=False):
-    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-25/auto_train/102118.186807_seed493/checkpoints_dog/ac_weights_009600.pt'
+    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-26/auto_train/132921.849054_seed4865/checkpoints_dog/ac_weights_040000.pt'
     resume = True
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
