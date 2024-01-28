@@ -348,6 +348,20 @@ class VelocityTrackingEasyEnv(LeggedRobot):
 
         return obs_buf, privileged_obs_buf
 
+    def quat_to_angle(self, quat):
+        quat = quat.to(self.device)
+        y_vector = to_torch([0., 1., 0.], device=self.device).repeat((quat.shape[0], 1))
+        z_vector = to_torch([0., 0., 1.], device=self.device).repeat((quat.shape[0], 1))
+        x_vector = to_torch([1., 0., 0.], device=self.device).repeat((quat.shape[0], 1))
+        roll_vec = quat_apply(quat, y_vector) # [0,1,0]
+        roll = torch.atan2(roll_vec[:, 2], roll_vec[:, 1]) # roll angle = arctan2(z, y)
+        pitch_vec = quat_apply(quat, z_vector) # [0,0,1]
+        pitch = torch.atan2(pitch_vec[:, 0], pitch_vec[:, 2]) # pitch angle = arctan2(x, z)
+        yaw_vec = quat_apply(quat, x_vector) # [1,0,0]
+        yaw = torch.atan2(yaw_vec[:, 1], yaw_vec[:, 0]) # yaw angle = arctan2(y, x)
+        
+        return torch.stack([roll, pitch, yaw], dim=-1)
+
 class HistoryWrapper(gym.Wrapper):
 
     def __init__(self, env):

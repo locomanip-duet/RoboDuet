@@ -3,37 +3,19 @@ import time
 import isaacgym
 
 assert isaacgym
-import glob
-import os
 import pickle as pkl
-import select
-import sys
 
-import cv2
 import numpy as np
 import torch
 from isaacgym.torch_utils import *
-from tqdm import tqdm
 
 from go1_gym.envs import *
-from go1_gym.envs.go1.go1_config import config_go1
 from go1_gym.envs.automatic import HistoryWrapper, VelocityTrackingEasyEnv
 from go1_gym.envs.automatic.legged_robot_config import Cfg
 from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmctorCritic
 from go1_gym_learn.ppo_cse_automatic.dog_ac import DogActorCritic
-from params_proto import PrefixProto, ParamsProto
-from go1_gym.utils import quaternion_to_rpy
+from go1_gym.utils import quaternion_to_rpy, input_with_timeout
 
-def input_with_timeout(timeout):
-    rlist, _, _ = select.select([sys.stdin], [], [], timeout)
-    if rlist:
-        s = sys.stdin.readline()
-        try:
-            return s.strip()
-        except:
-            return None
-    else:
-        return None
 
 
 def load_dog_policy(logdir, Cfg):
@@ -43,7 +25,7 @@ def load_dog_policy(logdir, Cfg):
                                 Cfg.dog.dog_actions,
                                 ).to("cpu")
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_025200.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_dog/a_ac_weights_last_dog.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
     actor_critic.load_state_dict(ckpt)
@@ -71,7 +53,7 @@ def load_arm_policy(logdir, Cfg):
     ).to('cpu')
     
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_025200.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_arm/a_ac_weights_last_arm.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
     actor_critic.eval()
@@ -165,8 +147,8 @@ def play_go1(headless=True):
             yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
             
             quat = quat_from_euler_xyz(torch.tensor(roll_cmd).reshape(-1, 1), torch.tensor(pitch_cmd).reshape(-1, 1), torch.tensor(yaw_cmd).reshape(-1, 1)).reshape(1, 4)
-            env.obj_quats = quat.to(env.device)
-            env.visual_rpy = quaternion_to_rpy(quat).to(env.device)
+            env.env.obj_quats = quat.to(env.device)
+            env.env.visual_rpy = quaternion_to_rpy(quat).to(env.device)
             
             if moving:
                 x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:0").squeeze().item()
