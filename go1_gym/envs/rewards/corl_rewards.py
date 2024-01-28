@@ -20,8 +20,8 @@ class CoRLRewards:
             , dim=1)
     
     def _reward_arm_orientation_control(self):
-        pitch_error = torch.abs(self.env.plan_actions[:, 0] - self.env.pitch)
-        roll_error = torch.abs(self.env.plan_actions[:, 1] - self.env.roll)
+        pitch_error = torch.abs(self.env.plan_actions[:, 0] + self.env.pitch)
+        roll_error = torch.abs(self.env.plan_actions[:, 1] + self.env.roll)
     
         return pitch_error + roll_error
         

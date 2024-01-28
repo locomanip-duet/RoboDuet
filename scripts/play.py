@@ -87,7 +87,7 @@ def load_arm_policy(logdir, Cfg):
 
     return policy
 
-logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-25/auto_train/150948.981397_seed6440"
+logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-27/auto_train/163059.957583_seed6919"
 
 
 moving = False
@@ -156,58 +156,58 @@ def play_go1(headless=True):
         # dog_obs = env.get_dog_observations()
         # arm_obs = env.get_arm_observations()        
         
-        if i % 200 == 0:
-            # l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:0").squeeze().item()
-            # p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:0").squeeze().item()
-            # y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            # roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            # pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            # yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+        if i % 100 == 0:
+            l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:0").squeeze().item()
+            p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:0").squeeze().item()
+            y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+            roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+            pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+            yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
             
-            # quat = quat_from_euler_xyz(torch.tensor(roll_cmd).reshape(-1, 1), torch.tensor(pitch_cmd).reshape(-1, 1), torch.tensor(yaw_cmd).reshape(-1, 1)).reshape(1, 4)
-            # env.obj_quats = quat.to(env.device)
-            # env.visual_rpy = quaternion_to_rpy(quat).to(env.device)
+            quat = quat_from_euler_xyz(torch.tensor(roll_cmd).reshape(-1, 1), torch.tensor(pitch_cmd).reshape(-1, 1), torch.tensor(yaw_cmd).reshape(-1, 1)).reshape(1, 4)
+            env.obj_quats = quat.to(env.device)
+            env.visual_rpy = quaternion_to_rpy(quat).to(env.device)
             
             if moving:
                 x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:0").squeeze().item()
                 yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:0").squeeze().item()
-        # if use_key:
-        #     key = input_with_timeout(0.03)
+        if use_key:
+            key = input_with_timeout(0.03)
             
-        #     if key=='b':
-        #         l_cmd += 0.05
-        #         l_cmd = np.clip(l_cmd, 0.2, 0.8)
-        #         print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
-        #     elif key=='h':
-        #         l_cmd -= 0.05
-        #         l_cmd = np.clip(l_cmd, 0.2, 0.8)
-        #         print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
-        #     elif key=='n':
-        #         p_cmd += 0.1
-        #         print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
-        #     elif key=='j':
-        #         p_cmd -= 0.1
-        #         print(f"l`_cmd: {l_cmd:.4f},      p_cmd: {p_cmd:.4f},      y_cmd:{y_cmd:.4f}" )
-        #     elif key=='m':
-        #         y_cmd = float(input("please input yaw "))
-        #         print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
-        #     elif key=='k':
-        #         y_cmd -= 0.1
-        #         print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
-        #     elif key=="w":
-        #         x_vel_cmd = float(input("please input vel x"))
-        #         # x_vel_cmd += 0.1
-        #         print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
-        #     elif key=="s":
-        #         x_vel_cmd -= 0.1
-        #         print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
-        #     elif key=="a":
-        #         yaw_vel_cmd = float(input("please input vel yaw"))
-        #         # yaw_vel_cmd += 0.1
-        #         print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
-        #     elif key=="d":
-        #         yaw_vel_cmd -= 0.1
-        #         print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
+            if key=='b':
+                l_cmd += 0.05
+                l_cmd = np.clip(l_cmd, 0.2, 0.8)
+                print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
+            elif key=='h':
+                l_cmd -= 0.05
+                l_cmd = np.clip(l_cmd, 0.2, 0.8)
+                print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
+            elif key=='n':
+                p_cmd += 0.1
+                print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
+            elif key=='j':
+                p_cmd -= 0.1
+                print(f"l`_cmd: {l_cmd:.4f},      p_cmd: {p_cmd:.4f},      y_cmd:{y_cmd:.4f}" )
+            elif key=='m':
+                y_cmd = float(input("please input yaw "))
+                print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
+            elif key=='k':
+                y_cmd -= 0.1
+                print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
+            elif key=="w":
+                x_vel_cmd = float(input("please input vel x"))
+                # x_vel_cmd += 0.1
+                print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
+            elif key=="s":
+                x_vel_cmd -= 0.1
+                print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
+            elif key=="a":
+                yaw_vel_cmd = float(input("please input vel yaw"))
+                # yaw_vel_cmd += 0.1
+                print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
+            elif key=="d":
+                yaw_vel_cmd -= 0.1
+                print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
 
     #     lpy = env.get_lpy_in_base_coord(0)
     #     measured_l[i] = np.clip(lpy[0].item(), -1, 0.5)
@@ -349,6 +349,9 @@ def load_env(logdir, headless=False):
     Cfg.hybrid.rewards.use_terminal_body_height = False
     Cfg.hybrid.rewards.use_terminal_roll = False
     Cfg.hybrid.rewards.use_terminal_pitch = False
+    Cfg.arm.commands.T_traj = [20000, 30000]
+            
+    
     # Cfg.env.num_observations = 65
     # Cfg.env.num_privileged_obs = 33
     # Cfg.env.num_actions = 18

@@ -29,7 +29,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
     def plan(self, obs):
         self.commands_dog[:, 3] = torch.clip(obs[..., 0], self.cfg.commands.limit_body_pitch[0], self.cfg.commands.limit_body_pitch[1])  # n, 2
         self.commands_dog[:, 4] = torch.clip(obs[..., 1], self.cfg.commands.limit_body_roll[0], self.cfg.commands.limit_body_roll[1])  # n, 2
-        self.plan_actions = obs
+        self.plan_actions[:] = obs
 
 
     def reset(self):
@@ -130,7 +130,13 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                                                  (self.gravities - gravity_shift) / gravity_scale),
                                                 dim=1)
    
-        privileged_obs_buf = torch.cat((privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
+        lpy = self._get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
+        forward = quat_apply(self.base_quat, self.forward_vec)
+        yaw = torch.atan2(forward[:, 1], forward[:, 0])
+        quat_base = quat_from_euler_xyz(torch.zeros_like(yaw), torch.zeros_like(yaw), yaw)
+        quat_ee_in_base = quat_mul(quat_base, self.end_effector_state[:, 3:7])
+        # privileged_obs_buf = torch.cat((privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
+        privileged_obs_buf = torch.cat((privileged_obs_buf, lpy, quat_ee_in_base), dim=1)
 
         assert privileged_obs_buf.shape[
                    1] == self.cfg.arm.arm_num_privileged_obs, f"arm num_privileged_obs ({self.cfg.arm.arm_num_privileged_obs}) != the number of privileged observations ({privileged_obs_buf.shape[1]}), you will discard data from the student!"
