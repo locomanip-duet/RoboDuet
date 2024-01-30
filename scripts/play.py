@@ -25,7 +25,7 @@ def load_dog_policy(logdir, Cfg):
                                 Cfg.dog.dog_actions,
                                 ).to("cpu")
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_dog/a_ac_weights_last_dog.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_044000.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
     actor_critic.load_state_dict(ckpt)
@@ -53,7 +53,7 @@ def load_arm_policy(logdir, Cfg):
     ).to('cpu')
     
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_arm/a_ac_weights_last_arm.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_044000.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
     actor_critic.eval()
@@ -104,6 +104,8 @@ def play_go1(headless=True):
 
     obs = env.reset()
     use_key = True
+    random = False
+    reorientation = False
     obs = env.get_arm_observations()
     # arm_obs = env.get_arm_observations()
     for i in (range(num_eval_steps)):
@@ -138,21 +140,23 @@ def play_go1(headless=True):
         # dog_obs = env.get_dog_observations()
         # arm_obs = env.get_arm_observations()        
         
-        if i % 100 == 0:
-            l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:0").squeeze().item()
-            p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:0").squeeze().item()
-            y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-            
-            quat = quat_from_euler_xyz(torch.tensor(roll_cmd).reshape(-1, 1), torch.tensor(pitch_cmd).reshape(-1, 1), torch.tensor(yaw_cmd).reshape(-1, 1)).reshape(1, 4)
-            env.env.obj_quats = quat.to(env.device)
-            env.env.visual_rpy = quaternion_to_rpy(quat).to(env.device)
-            
-            if moving:
-                x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:0").squeeze().item()
-                yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:0").squeeze().item()
+        if random:
+            if i % 100 == 0:
+                if not reorientation:
+                    l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:0").squeeze().item()
+                    p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:0").squeeze().item()
+                    y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                
+                quat = quat_from_euler_xyz(torch.tensor(roll_cmd).reshape(-1, 1), torch.tensor(pitch_cmd).reshape(-1, 1), torch.tensor(yaw_cmd).reshape(-1, 1)).reshape(1, 4)
+                env.env.obj_quats = quat.to(env.device)
+                env.env.visual_rpy = quaternion_to_rpy(quat).to(env.device)
+                
+                if moving:
+                    x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:0").squeeze().item()
+                    yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:0").squeeze().item()
         if use_key:
             key = input_with_timeout(0.03)
             
@@ -171,7 +175,8 @@ def play_go1(headless=True):
                 p_cmd -= 0.1
                 print(f"l`_cmd: {l_cmd:.4f},      p_cmd: {p_cmd:.4f},      y_cmd:{y_cmd:.4f}" )
             elif key=='m':
-                y_cmd = float(input("please input yaw "))
+                # y_cmd = float(input("please input yaw "))
+                y_cmd += 0.1
                 print(f"l_cmd, p_cmd, y_cmd = {l_cmd:.4f}, {p_cmd:.4f}, {y_cmd:.4f}" )
             elif key=='k':
                 y_cmd -= 0.1
@@ -184,8 +189,8 @@ def play_go1(headless=True):
                 x_vel_cmd -= 0.1
                 print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
             elif key=="a":
-                yaw_vel_cmd = float(input("please input vel yaw"))
-                # yaw_vel_cmd += 0.1
+                # yaw_vel_cmd = float(input("please input vel yaw"))
+                yaw_vel_cmd += 0.1
                 print(f"x_vel_cmd: {x_vel_cmd:.4f},      y_vel_cmd: {y_vel_cmd:.4f},      yaw_vel_cmd:{yaw_vel_cmd:.4f}" )
             elif key=="d":
                 yaw_vel_cmd -= 0.1

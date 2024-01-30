@@ -26,7 +26,7 @@ def load_dog_policy(logdir, Cfg):
                                 Cfg.dog.dog_actions,
                                 ).to("cpu")
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_dog/a_ac_weights_last_dog.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_044000.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
     actor_critic.load_state_dict(ckpt)
@@ -54,7 +54,7 @@ def load_arm_policy(logdir, Cfg):
     ).to('cpu')
     
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_arm/a_ac_weights_last_arm.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_044000.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
     actor_critic.eval()
@@ -218,8 +218,8 @@ def play_go1(headless=True):
     use_key = True
     relative_world_pose = [0.5, 0., 0.6]
     count = 0
-    vel_change = 60
-    vel_max =  0.4
+    vel_change = 120
+    vel_max =  0.2
     
     world_pose, world_quat = get_init_world_commands(env, relative_world_pose, env.device)
     lpy, rpy = world2_lpyrpy(env, world_pose, world_quat)
