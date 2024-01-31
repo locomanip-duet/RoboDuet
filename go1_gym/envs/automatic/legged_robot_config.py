@@ -37,7 +37,7 @@ class Cfg(PrefixProto, cli=False):
         
         arm_num_privileged_obs = 9
         arm_num_observation_history = 30
-        arm_num_observations = 26
+        arm_num_observations = 26 - 6
         arm_num_obs_history = arm_num_observations * arm_num_observation_history
         arm_num_commands = 6
         num_actions_arm_cd = 8

@@ -6,8 +6,8 @@ class GlobalSwitch():
         self.hybrid_reward_scales = None
         self.pretrained_reward_scales = None
         
-        self.pretrained_to_hybrid_start = 2000
-        self.pretrained_to_hybrid_end = self.pretrained_to_hybrid_start + 2000
+        self.pretrained_to_hybrid_start = 20
+        self.pretrained_to_hybrid_end = self.pretrained_to_hybrid_start + 20
         
     def set_reward_scales(self, hybrid_reward_scales, pretrained_reward_scales):
         self.hybrid_reward_scales = hybrid_reward_scales
@@ -26,6 +26,16 @@ class GlobalSwitch():
         
         else:
             return self.hybrid_reward_scales
+    
+    def get_beta(self):
+        if self.count < self.pretrained_to_hybrid_start:
+            return 0.0
+        
+        elif self.count < self.pretrained_to_hybrid_end:
+            return 0.5 * (self.count - self.pretrained_to_hybrid_start) / (self.pretrained_to_hybrid_end - self.pretrained_to_hybrid_start)
+        
+        else:
+            return 0.5
     
     def open_switch(self):
         self.switch_flag = True

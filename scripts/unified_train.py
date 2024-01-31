@@ -19,14 +19,19 @@ import pickle
 
 from go1_gym.envs.automatic import HistoryWrapper, VelocityTrackingEasyEnv
 
-from go1_gym_learn.ppo_cse_automatic import Runner
-from go1_gym_learn.ppo_cse_automatic.ppo import PPO_Args
-from go1_gym_learn.ppo_cse_automatic import RunnerArgs
-from go1_gym_learn.ppo_cse_automatic.dog_ac import DogAC_Args
-from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmAC_Args
+from go1_gym_learn.ppo_cse_unified import Runner
+from go1_gym_learn.ppo_cse_unified.ppo import UnifiedPPO_Args
+from go1_gym_learn.ppo_cse_unified import UnifiedRunnerArgs
+from go1_gym_learn.ppo_cse_unified.unified2head_ac import Unified2AC_Args
 
 
 from go1_gym.utils import format_code, set_seed, global_switch
+
+def unified_reward_scales_wrapper(self):
+    def get_reward_scales():
+        return self.hybrid_reward_scales
+
+    return get_reward_scales
 
 def train_go1(headless=True):
     config_go1(Cfg)
@@ -62,8 +67,7 @@ def train_go1(headless=True):
     Cfg.env.num_actions = 18
     Cfg.env.num_observations = 63
     Cfg.env.num_privileged_obs = 18
-    Cfg.dog.dog_num_privileged_obs = 5
-    Cfg.arm.arm_num_privileged_obs = 15
+    Cfg.env.num_obs_history = Cfg.env.num_observation_history * Cfg.env.num_observations
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
@@ -73,12 +77,9 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
     Cfg.env.priv_observe_vel = True
     Cfg.commands.global_reference = False
     Cfg.env.priv_observe_high_freq_goal = True
-    
 
             
     Cfg.asset.penalize_contacts_on = [
@@ -144,41 +145,38 @@ def train_go1(headless=True):
 
 
         #  for example: /home/pi7113t/dog/dwb-wtw/runs/wo_any_random/2023-12-31/train_ppo/021707.917935
-        os.makedirs(osp.join(args.log_dir, "checkpoints_arm"), exist_ok=True)
-        os.makedirs(osp.join(args.log_dir, "checkpoints_dog"), exist_ok=True)
+        os.makedirs(osp.join(args.log_dir, "checkpoints_unified"), exist_ok=True)
+        os.makedirs(osp.join(args.log_dir, "deploy_model"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "scripts"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "videos"), exist_ok=True)
-        os.makedirs(f"{MINI_GYM_ROOT_DIR}/tmp/deploy_model", exist_ok=True)
 
         # 将版本的 commit 代码 保存到 runs
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/auto_train.py", f"{args.log_dir}/scripts/auto_train.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/unified_train.py", f"{args.log_dir}/scripts/unified_train.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{args.log_dir}/scripts/legged_robot.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{args.log_dir}/scripts/legged_robot_config.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{args.log_dir}/scripts/env__init__.py")
         
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/__init__.py", f"{args.log_dir}/scripts/ppo_cse_automatic__init__.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/arm_ac.py", f"{args.log_dir}/scripts/arm_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/dog_ac.py", f"{args.log_dir}/scripts/dog_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/ppo.py", f"{args.log_dir}/scripts/ppo.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", f"{args.log_dir}/scripts/rollout_storage.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/__init__.py", f"{args.log_dir}/scripts/ppo_cse_unified__init__.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/unified2head_ac.py", f"{args.log_dir}/scripts/unified2head_ac.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/ppo.py", f"{args.log_dir}/scripts/ppo.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/rollout_storage.py", f"{args.log_dir}/scripts/rollout_storage.py")
         
         
         # # 将版本的 commit 代码 保存到 wandb
         os.makedirs(f"{wandb.run.dir}/scripts", exist_ok=True)
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/auto_train.py", f"{wandb.run.dir}/scripts/auto_train.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/unified_train.py", f"{wandb.run.dir}/scripts/unified_train.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{wandb.run.dir}/scripts/legged_robot.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{wandb.run.dir}/scripts/legged_robot_config.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{wandb.run.dir}/scripts/env__init__.py")
         
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/__init__.py", f"{wandb.run.dir}/scripts/ppo_cse_automatic__init__.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/arm_ac.py", f"{wandb.run.dir}/scripts/arm_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/dog_ac.py", f"{wandb.run.dir}/scripts/dog_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/ppo.py", f"{wandb.run.dir}/scripts/ppo.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", f"{wandb.run.dir}/scripts/rollout_storage.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/__init__.py", f"{wandb.run.dir}/scripts/ppo_cse_unified__init__.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/unified2head_ac.py", f"{wandb.run.dir}/scripts/unified2head_ac.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/ppo.py", f"{wandb.run.dir}/scripts/ppo.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/rollout_storage.py", f"{wandb.run.dir}/scripts/rollout_storage.py")
         
         
         # 将参数保存到 runs
-        temp_dict = {"Cfg": vars(Cfg), "RunnerArgs": vars(RunnerArgs), "ArmAC_Args": vars(ArmAC_Args), "DogAC_Args": vars(DogAC_Args), "PPO_Args": vars(PPO_Args),}
+        temp_dict = {"Cfg": vars(Cfg), "RunnerArgs": vars(UnifiedRunnerArgs), "Unified2AC_Args": vars(Unified2AC_Args), "PPO_Args": vars(UnifiedPPO_Args),}
 
         with open(f"{args.log_dir}/params.txt", "w", encoding="utf-8") as f:
             format_temp_dict = format_code(str(temp_dict))
@@ -205,6 +203,11 @@ def train_go1(headless=True):
 
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)
+    
+    global_switch.pretrained_to_hybrid_start = 0  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
+    global_switch.get_reward_scales = unified_reward_scales_wrapper(global_switch)
+    
     gpu_id = args.sim_device.split(":")[-1]
     runner = Runner(env, device=f"cuda:{gpu_id}", run_name=args.run_name, resume=args.resume, log_dir=args.log_dir, debug=args.debug)
     runner.learn(num_learning_iterations=args.num_learning_iterations, init_at_random_ep_len=True, eval_freq=args.eval_freq)
