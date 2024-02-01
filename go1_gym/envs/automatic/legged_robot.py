@@ -961,7 +961,6 @@ class LeggedRobot(BaseTask):
         self.env_command_categories[env_ids.cpu().numpy()] = 0
 
         if (not global_switch.switch_open) or (not self.cfg.hybrid.plan_vel):
-            print((not global_switch.switch_open) or (not self.cfg.hybrid.plan_vel))
             self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
             self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
 
