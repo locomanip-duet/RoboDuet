@@ -7,6 +7,7 @@ class Cfg(PrefixProto, cli=False):
     
     class hybrid(PrefixProto, cli=False):
         num_actions = 18
+        plan_vel = False
         
         class rewards(PrefixProto, cli=False):
             terminal_body_height = 0.28

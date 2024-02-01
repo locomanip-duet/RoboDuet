@@ -183,7 +183,7 @@ class Runner:
                     if global_switch.switch_open:
                         actions_arm = self.alg_arm.act(obs_arm[:num_train_envs], privileged_obs_arm[:num_train_envs],
                                                     obs_history_arm[:num_train_envs])
-                        self.env.plan(actions_arm[..., -2:])
+                        self.env.plan(actions_arm[..., -self.env.num_plan_actions:])
                         
                     dog_obs_dict = self.env.get_dog_observations()
                     
@@ -198,7 +198,7 @@ class Runner:
                     # add reward
                     actions_dog = self.alg_dog.act(dog_obs_dict["obs"], dog_obs_dict["privileged_obs"], dog_obs_dict["obs_history"])
                     
-                    ret = self.env.step(actions_dog, actions_arm[..., :-2])
+                    ret = self.env.step(actions_dog, actions_arm[..., :-self.env.num_plan_actions])
                     rewards_dog, rewards_arm, dones, infos = ret
                     
                     if global_switch.switch_open:

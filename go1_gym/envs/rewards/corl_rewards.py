@@ -19,6 +19,12 @@ class CoRLRewards:
             torch.square(self.env.torques[:, :self.env.num_actions_loco]*self.env.dof_vel[:, :self.env.num_actions_loco])
             , dim=1)
     
+    def _reward_arm_vel_control(self):
+        linv_vel_error = torch.abs(self.env.plan_actions[:, 2] - self.env.base_lin_vel[:, 0] * self.env.obs_scales.lin_vel)
+        ang_vel_error = torch.abs(self.env.plan_actions[:, 3] - self.env.base_ang_vel[:, 2] * self.env.obs_scales.ang_vel)
+    
+        return linv_vel_error + ang_vel_error
+    
     def _reward_arm_orientation_control(self):
         pitch_error = torch.abs(self.env.plan_actions[:, 0] + self.env.pitch)
         roll_error = torch.abs(self.env.plan_actions[:, 1] + self.env.roll)

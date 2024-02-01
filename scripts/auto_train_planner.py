@@ -74,11 +74,15 @@ def train_go1(headless=True):
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
     global_switch.pretrained_to_hybrid_start = 10  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 10
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 20
     Cfg.env.priv_observe_vel = True
     Cfg.commands.global_reference = False
     Cfg.env.priv_observe_high_freq_goal = True
     
+    Cfg.hybrid.plan_vel = True
+    if Cfg.hybrid.plan_vel:
+        Cfg.arm.num_actions_arm_cd += 2
+        Cfg.hybrid.reward_scales.arm_vel_control = -1
 
             
     Cfg.asset.penalize_contacts_on = [

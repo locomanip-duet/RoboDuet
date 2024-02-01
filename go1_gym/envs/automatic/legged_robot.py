@@ -960,17 +960,20 @@ class LeggedRobot(BaseTask):
         self.env_command_bins[env_ids.cpu().numpy()] = new_bin_inds
         self.env_command_categories[env_ids.cpu().numpy()] = 0
 
-        self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
-        self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
-        # self.commands_dog[env_ids, 0] = 0.
-        # self.commands_dog[env_ids, 2] = 0.
-        
+        if (not global_switch.switch_open) or (not self.cfg.hybrid.plan_vel):
+            print((not global_switch.switch_open) or (not self.cfg.hybrid.plan_vel))
+            self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
+            self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
+
+            # setting the smaller commands to zero
+            if not self.cfg.hybrid.plan_vel:
+                self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
+            
         if not global_switch.switch_open:
             self.commands_dog[env_ids, 3] = torch.Tensor(new_commands[:, 3]).to(self.device)
             self.commands_dog[env_ids, 4] = torch.Tensor(new_commands[:, 4]).to(self.device)
             
-        # setting the smaller commands to zero
-        self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
+
 
         # reset command sums
         for key in self.command_sums.keys():
@@ -1421,7 +1424,8 @@ class LeggedRobot(BaseTask):
         self.add_force_flag = torch.rand(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) # command 时间
         self.forces = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
         self.force_positions = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
-        self.plan_actions = torch.zeros(self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False)
+        self.num_plan_actions = self.cfg.arm.num_actions_arm_cd - self.num_actions_arm
+        self.plan_actions = torch.zeros(self.num_envs, self.num_plan_actions, dtype=torch.float, device=self.device, requires_grad=False)
 
     def _init_custom_buffers__(self):
         # domain randomization properties
