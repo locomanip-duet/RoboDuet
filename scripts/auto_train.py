@@ -26,7 +26,7 @@ from go1_gym_learn.ppo_cse_automatic.dog_ac import DogAC_Args
 from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmAC_Args
 
 
-from go1_gym.utils import format_code, set_seed
+from go1_gym.utils import format_code, set_seed, global_switch
 
 def train_go1(headless=True):
     config_go1(Cfg)
@@ -58,8 +58,12 @@ def train_go1(headless=True):
     Cfg.terrain.mesh_type = "plane"
     if Cfg.terrain.mesh_type == "plane":
         Cfg.terrain.teleport_robots = False
-    Cfg.control.update_obs_freq = 50 # Hz
+    Cfg.control.update_obs_freq = 5 # Hz
     Cfg.env.num_actions = 18
+    Cfg.env.num_observations = 63
+    Cfg.env.num_privileged_obs = 18
+    Cfg.dog.dog_num_privileged_obs = 5
+    Cfg.arm.arm_num_privileged_obs = 15
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
@@ -69,6 +73,12 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
+    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
+    Cfg.env.priv_observe_vel = True
+    Cfg.commands.global_reference = False
+    Cfg.env.priv_observe_high_freq_goal = True
+    
 
             
     Cfg.asset.penalize_contacts_on = [
@@ -193,7 +203,6 @@ def train_go1(headless=True):
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", policy="now")
         
 
-    
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)
     gpu_id = args.sim_device.split(":")[-1]

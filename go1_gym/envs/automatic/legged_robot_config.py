@@ -11,8 +11,8 @@ class Cfg(PrefixProto, cli=False):
         class rewards(PrefixProto, cli=False):
             terminal_body_height = 0.28
             use_terminal_body_height = True
-            use_terminal_roll = True
-            use_terminal_pitch = True
+            use_terminal_roll = False
+            use_terminal_pitch = False
             use_terminal_roll_pitch = False # TODO
             terminal_body_roll = 0.10
             terminal_body_pitch = 0.2
@@ -28,14 +28,16 @@ class Cfg(PrefixProto, cli=False):
             # penalize_pitch = -0.5
             # action_smoothness_1 = -0.
             # action_smoothness_2 = -0.
-    
+            hip_action_l2 = -0.01
+            raibert_heuristic = -0.0
+            arm_orientation_control = -1.
 
     class arm(PrefixProto, cli=False):
         num_actions_arm = 6
         
         arm_num_privileged_obs = 9
         arm_num_observation_history = 30
-        arm_num_observations = 26
+        arm_num_observations = 26 - 6
         arm_num_obs_history = arm_num_observations * arm_num_observation_history
         arm_num_commands = 6
         num_actions_arm_cd = 8

@@ -3,6 +3,21 @@ import torch
 import random
 import numpy as np
 import os
+import sys
+import select
+
+
+def input_with_timeout(timeout):
+    rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+    if rlist:
+        s = sys.stdin.readline()
+        try:
+            return s.strip()
+        except:
+            return None
+    else:
+        return None
+
 
 def format_code(code_text: str):
     """Format the code text with yapf."""

@@ -61,11 +61,11 @@ class RunnerArgs(PrefixProto, cli=False):
     resume_path = "/home/pi7113t/dog/dwb-wtw/runs/约束hip_newwidth/2023-12-08/train_ppo/145259.218560"  # updated from load_run and chkpt
 
 class ArmRunnerArgs(PrefixProto, cli=False):
-    resume_path = ''
+    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-24/auto_train/091933.229177_seed2707/checkpoints_arm/ac_weights_last_arm.pt'
     resume = False
     
 class DogRunnerArgs(PrefixProto, cli=False):
-    resume_path = ''
+    resume_path = '/home/pgp/agile/hybrid_improve_dwb/runs/combine/2024-01-26/auto_train/132921.849054_seed4865/checkpoints_dog/ac_weights_040000.pt'
     resume = False
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
@@ -109,13 +109,13 @@ class Runner:
 
         if DogRunnerArgs.resume:
             # load pretrained weights from resume_path
-            weights = torch.load(osp.join(DogRunnerArgs.resume_path, "checkpoints_arm/ac_weights_last.pt"))
+            weights = torch.load(DogRunnerArgs.resume_path)
             self.dog_model.load_state_dict(state_dict=weights)
             print("successfully loaded dog weights!!!")
 
         if ArmRunnerArgs.resume:
             # load pretrained weights from resume_path
-            weights = torch.load(osp.join(ArmRunnerArgs.resume_path, "checkpoints_dog/ac_weights_last.pt"))
+            weights = torch.load(ArmRunnerArgs.resume_path)
             self.arm_model.load_state_dict(state_dict=weights)
             print("successfully loaded arm weights!!!")
 
@@ -197,6 +197,7 @@ class Runner:
                     
                     # add reward
                     actions_dog = self.alg_dog.act(dog_obs_dict["obs"], dog_obs_dict["privileged_obs"], dog_obs_dict["obs_history"])
+                    
                     ret = self.env.step(actions_dog, actions_arm[..., :-2])
                     rewards_dog, rewards_arm, dones, infos = ret
                     
@@ -245,6 +246,11 @@ class Runner:
             global_switch.count += 1
 
             if it == global_switch.pretrained_to_hybrid_start:
+                blue_bold_text = '\033[1;34m'  # 使用ANSI转义码设置文本颜色为蓝色并加粗
+                reset_color = '\033[0m'  # 重置文本样式和颜色
+                print(blue_bold_text + '=' * 160 + '\n' 
+                      + 'Multi-agents Policy Output: Pretrained model training finished, start to train hybrid model.' + '\n'
+                      + '=' * 160 + reset_color)
                 global_switch.open_switch()
                 change_setting = vars(self.env.cfg.hybrid.rewards)
                 for key, value in change_setting.items():
@@ -344,7 +350,7 @@ class Runner:
     def save_dog(self, it):
         torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"),
-            osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
+            osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
             
         path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
         adaptation_module_dog_path = f'{path}/adaptation_module_latest_dog.jit'
@@ -359,13 +365,13 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_dog_path)
         wandb.save(body_dog_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
 
             
     def save_arm(self, it):
         torch.save(self.alg_arm.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"), 
-                        osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
+                        osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
         
         path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
         adaptation_module_path = f'{path}/adaptation_module_latest_arm.jit'
@@ -380,7 +386,7 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_path)
         wandb.save(body_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
 
     def save_cv(self, frames, it):
         # fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 指定编码器（此处使用MP4V编码器）

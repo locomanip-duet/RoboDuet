@@ -172,7 +172,7 @@ class PPO:
                 adaptation_pred = self.actor_critic.adaptation_module(obs_history_batch)
                 with torch.no_grad():
                     adaptation_target = privileged_obs_batch
-                    # residual = (adaptation_target - adaptation_pred).norm(dim=1)
+                # residual = (adaptation_target - adaptation_pred).norm(dim=1)
                     # caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
                     #                       sysid_residual=residual.cpu().numpy())
 
