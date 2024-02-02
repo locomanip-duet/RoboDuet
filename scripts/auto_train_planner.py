@@ -7,6 +7,7 @@ import argparse
 from go1_gym.envs.automatic.legged_robot_config import Cfg
 from go1_gym.envs.go1.go1_config import config_go1
 from go1_gym.envs.go1.wtw_config import config_wtw
+from go1_gym.envs.go1.asset_config import config_asset
 
 import wandb
 import os
@@ -31,6 +32,7 @@ from go1_gym.utils import format_code, set_seed, global_switch
 def train_go1(headless=True):
     config_go1(Cfg)
     config_wtw(Cfg)
+    config_asset(Cfg)
     
     Cfg.commands.distributional_commands = False
     Cfg.domain_rand.lag_timesteps = 6
@@ -46,24 +48,13 @@ def train_go1(headless=True):
     Cfg.env.num_envs = args.num_envs
 
     Cfg.env.keep_arm_fixed = True
-    Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/widowGo1/urdf/widowGo1.urdf'
-    Cfg.asset.hip_joints = {'hip'}
-    Cfg.control.stiffness = {'joint': 35., 'widow': 5.}  # [N*m/rad]
-    Cfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5.}  # [N*m/rad]
-    Cfg.arm.control.damping_arm = {'joint': 1, 'widow': 1,}  # [N*m*s/rad]
-    Cfg.dog.control.stiffness_leg = {'joint': 35.}  # [N*m/rad]
-    Cfg.dog.control.damping_leg = {'joint': 1.}  # [N*m*s/rad]
-    
     
     Cfg.terrain.mesh_type = "plane"
     if Cfg.terrain.mesh_type == "plane":
         Cfg.terrain.teleport_robots = False
-    Cfg.control.update_obs_freq = 5 # Hz
+    Cfg.control.update_obs_freq = 50 # Hz
     Cfg.env.num_actions = 18
     Cfg.env.num_observations = 63
-    Cfg.env.num_privileged_obs = 18
-    Cfg.dog.dog_num_privileged_obs = 5
-    Cfg.arm.arm_num_privileged_obs = 15
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
@@ -73,53 +64,21 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    global_switch.pretrained_to_hybrid_start = 10  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 20
-    Cfg.env.priv_observe_vel = True
+    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 5000
+    
+    Cfg.env.priv_observe_vel = False
     Cfg.commands.global_reference = False
-    Cfg.env.priv_observe_high_freq_goal = True
+    Cfg.env.priv_observe_high_freq_goal = False
+    Cfg.dog.dog_num_privileged_obs = 2
+    Cfg.arm.arm_num_privileged_obs = 9
+    Cfg.env.num_privileged_obs = 9
     
     Cfg.hybrid.plan_vel = True
     if Cfg.hybrid.plan_vel:
         Cfg.arm.num_actions_arm_cd += 2
         Cfg.hybrid.reward_scales.arm_vel_control = -1
 
-            
-    Cfg.asset.penalize_contacts_on = [
-        # 'base', 'trunk',
-        "arm", "wrist",
-        "gripper", "thigh", "calf"]
-    
-    Cfg.asset.render_sphere = True # NOTE no use in headless 
-    Cfg.init_state.default_joint_angles = {  # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.1,  # [rad]
-            'RL_hip_joint': 0.1,  # [rad]
-            'FR_hip_joint': -0.1,  # [rad]
-            'RR_hip_joint': -0.1,  # [rad]
-
-            'FL_thigh_joint': 0.8,  # [rad]
-            'RL_thigh_joint': 1.,  # [rad]
-            'FR_thigh_joint': 0.8,  # [rad]
-            'RR_thigh_joint': 1.,  # [rad]
-
-            'FL_calf_joint': -1.5,  # [rad]
-            'RL_calf_joint': -1.5,  # [rad]
-            'FR_calf_joint': -1.5,  # [rad]
-            'RR_calf_joint': -1.5,  # [rad]
-            
-            'widow_waist': 0., 
-            'widow_shoulder': 0., 
-            'widow_elbow': 0., 
-            'forearm_roll': 0., 
-            'widow_wrist_angle': 0., 
-            'widow_wrist_rotate': 0., 
-            'widow_forearm_roll': 0., 
-            'gripper': 0., 
-            'widow_left_finger': 0., 
-            'widow_right_finger': 0.
-        }
-
-    
     
     now = datetime.now()
     stem = Path(__file__).stem

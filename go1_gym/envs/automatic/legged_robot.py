@@ -960,13 +960,23 @@ class LeggedRobot(BaseTask):
         self.env_command_bins[env_ids.cpu().numpy()] = new_bin_inds
         self.env_command_categories[env_ids.cpu().numpy()] = 0
 
-        if (not global_switch.switch_open) or (not self.cfg.hybrid.plan_vel):
+        # if (not global_switch.switch_open) or (not self.cfg.hybrid.plan_vel):
+        #     self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
+        #     self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
+
+        #     # setting the smaller commands to zero
+        #     if not self.cfg.hybrid.plan_vel:
+        #         self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
+            
+        if not self.cfg.hybrid.plan_vel:
             self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
             self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
-
-            # setting the smaller commands to zero
-            if not self.cfg.hybrid.plan_vel:
-                self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
+            self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
+        else:
+            if not global_switch.switch_open:
+                self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
+                self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
+                self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)   
             
         if not global_switch.switch_open:
             self.commands_dog[env_ids, 3] = torch.Tensor(new_commands[:, 3]).to(self.device)
@@ -1699,6 +1709,8 @@ class LeggedRobot(BaseTask):
                                                                                         self.actor_handles[0],
                                                                                         hip_body_names[i])
         
+        print("self.body_names: ", body_names)
+        print("self.dof_names: ", self.dof_names)
         print("self.termination_contact_indices", self.termination_contact_indices)
         print("self.hip_joints_indices", self.hip_body_indices)
         
