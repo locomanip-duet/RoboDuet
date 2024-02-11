@@ -65,8 +65,9 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 5000
+    global_switch.pretrained_to_hybrid_start = 2000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
+    global_switch.init_sigmoid_lr()
     
     Cfg.env.priv_observe_vel = False
     Cfg.commands.global_reference = False

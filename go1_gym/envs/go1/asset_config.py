@@ -13,12 +13,13 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
         # 'base', 'trunk',
         "arm", "wrist", 'zarx',
         "gripper", "thigh", "calf"]
+    Cnfg.asset.terminate_after_contacts_on = ['zarx']
     
     Cnfg.asset.hip_joints = {'hip'}
     
-    Cnfg.control.stiffness = {'joint': 35., 'widow': 5., "zarx": 5.}  # [N*m/rad]
-    Cnfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5.}  # [N*m/rad]
-    Cnfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1.}  # [N*m*s/rad]
+    Cnfg.control.stiffness = {'joint': 35., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
+    Cnfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
+    Cnfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
     Cnfg.dog.control.stiffness_leg = {'joint': 35.}  # [N*m/rad]
     Cnfg.dog.control.damping_leg = {'joint': 1.}  # [N*m*s/rad]
    
@@ -52,8 +53,8 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
         'widow_right_finger': 0.,
         
         "zarx_j1": 0.0,
-        "zarx_j2": 0.85,
-        "zarx_j3": 0.85,
+        "zarx_j2": 0.8,
+        "zarx_j3": 0.8,
         "zarx_j4": 0.0,
         "zarx_j5": 0.0,
         "zarx_j6": 0.0,

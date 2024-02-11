@@ -31,7 +31,7 @@ class Cfg(PrefixProto, cli=False):
             # action_smoothness_2 = -0.
             hip_action_l2 = -0.01
             raibert_heuristic = -0.0
-            arm_orientation_control = -1.
+            arm_orientation_control = -0.1
 
     class arm(PrefixProto, cli=False):
         num_actions_arm = 6
