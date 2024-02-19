@@ -289,8 +289,8 @@ class LeggedRobot(BaseTask):
     def check_termination(self):
         """ Check if environments need to be reset
         """
-        self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
-        # self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        # self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
+        self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.time_out_buf = self.episode_length_buf > self.cfg.env.max_episode_length  # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
         if self.cfg.rewards.use_terminal_body_height:
@@ -312,8 +312,10 @@ class LeggedRobot(BaseTask):
         self.delta_z = l_align*torch.sin(p_align) + 0.38 -self.base_pos[:, 2]
         
         if global_switch.switch_open and self.cfg.hybrid.rewards.use_terminal_pitch:
-            reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
-            reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            # reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            # reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.commands_arm[:, 1] < 0.0) # lpy
+            reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.commands_arm[:, 1] > 0.0) # lpy
             # filter = self.pitch < 0
             self.reverse_buf |= reverse_buf3 | reverse_buf4 
             # self.reverse_buf |= filter

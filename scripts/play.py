@@ -25,7 +25,7 @@ def load_dog_policy(logdir, Cfg):
                                 Cfg.dog.dog_actions,
                                 ).to("cpu")
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_044000.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_042000.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
     actor_critic.load_state_dict(ckpt)
@@ -53,7 +53,7 @@ def load_arm_policy(logdir, Cfg):
     ).to('cpu')
     
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_044000.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_042000.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
     actor_critic.eval()
@@ -69,7 +69,7 @@ def load_arm_policy(logdir, Cfg):
 
     return policy
 
-logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/arx_last/2024-02-10/auto_train/164107.001640_seed8012"
+logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/arx_last/2024-02-17/auto_train/093028.751491_seed2045"
 
 
 moving = False
