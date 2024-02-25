@@ -30,6 +30,27 @@ class CoRLRewards:
         roll_error = torch.abs(self.env.plan_actions[:, 1] + self.env.roll)
     
         return pitch_error + roll_error
+
+    def _reward_arm_control_limits(self):
+        out_of_limits = -(self.env.plan_actions[:, 0] - self.env.cfg.commands.limit_body_pitch[0]).clip(max=0.)  # lower limit
+        out_of_limits += (self.env.plan_actions[:, 0] - self.env.cfg.commands.limit_body_pitch[1]).clip(min=0.)
+        out_of_limits += -(self.env.plan_actions[:, 1] - self.env.cfg.commands.limit_body_roll[0]).clip(max=0.)  # lower limit
+        out_of_limits += (self.env.plan_actions[:, 1] - self.env.cfg.commands.limit_body_roll[1]).clip(min=0.)
+        # return torch.sum(out_of_limits, dim=1)
+        return out_of_limits
+        
+    def _reward_arm_control_smoothness_1(self):
+        # Penalize changes in actions
+        diff = torch.square(self.env.plan_actions - self.env.last_plan_actions)
+        diff = diff * (self.env.last_plan_actions != 0)  # ignore first step
+        return torch.sum(diff, dim=1)
+
+    # def _reward_arm_control_smoothness_2(self):
+    #     # Penalize changes in actions
+    #     diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actuated_dof] - 2 * self.env.last_joint_pos_target[:, :self.env.num_actuated_dof] + self.env.last_last_joint_pos_target[:, :self.env.num_actuated_dof])
+    #     diff = diff * (self.env.last_actions[:, :self.env.num_dof] != 0)  # ignore first step
+    #     diff = diff * (self.env.last_last_actions[:, :self.env.num_dof] != 0)  # ignore second step
+    #     return torch.sum(diff, dim=1)
         
     def _reward_arm_energy(self):
       
@@ -53,6 +74,16 @@ class CoRLRewards:
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
         return torch.square(self.env.base_lin_vel[:, 2])
+
+    def _reward_vis_manip_commands_tracking_lpy(self):
+        lpy = self.env._get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        lpy_error = torch.sum((torch.abs(lpy - self.env.commands_arm[:, 0:3])) / self.env.commands_arm_lpy_range, dim=1)
+        return torch.exp(-6*lpy_error)
+
+    def _reward_vis_manip_commands_tracking_rpy(self):
+        rpy = self.env._get_roll_pitch_yaw_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        rpy_error = torch.sum((torch.abs(rpy - self.env.commands_arm[:, 3:6])) / self.env.commands_arm_rpy_range, dim=1)
+        return torch.exp(-rpy_error)
 
     def _reward_arm_manip_commands_tracking_combine(self):
         lpy = self.env._get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))

@@ -27,15 +27,16 @@ class VelocityTrackingEasyEnv(LeggedRobot):
 
 
     def plan(self, obs):
-        self.commands_dog[:, 3] = torch.clip(obs[..., 0], self.cfg.commands.limit_body_pitch[0], self.cfg.commands.limit_body_pitch[1])  # n, 2
-        self.commands_dog[:, 4] = torch.clip(obs[..., 1], self.cfg.commands.limit_body_roll[0], self.cfg.commands.limit_body_roll[1])  # n, 2
+        self.commands_dog[:, 3] = torch.clip(obs[..., 0] * 0.4, self.cfg.commands.limit_body_pitch[0], self.cfg.commands.limit_body_pitch[1])  # n, 2
+        self.commands_dog[:, 4] = torch.clip(obs[..., 1] * 0.4, self.cfg.commands.limit_body_roll[0], self.cfg.commands.limit_body_roll[1])  # n, 2
         
-        print("command: ", self.commands_dog[:, 3:])
-        print("obs: ", obs[..., 0:2])
+        # print("command: ", self.commands_dog[:, 3:])
+        # print("obs: ", obs[..., 0:2]* 0.4)
+        # print("obs: ", obs[..., 0:2])
         if self.cfg.hybrid.plan_vel:
             self.commands_dog[:, 0] = torch.clip(obs[..., 2], -2, 2)  # lin_vel
             self.commands_dog[:, 2] = torch.clip(obs[..., 3], -2, 2)  # ang_vel
-        self.plan_actions[:] = obs
+        self.plan_actions[:] = obs * 0.4
 
 
     def reset(self):

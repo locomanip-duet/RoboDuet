@@ -53,9 +53,9 @@ class PPO:
         self.learning_rate = PPO_Args.learning_rate
 
     def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, privileged_obs_shape, obs_history_shape,
-                     action_shape):
+                     action_shape, action_woc_shape):
         self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, privileged_obs_shape,
-                                      obs_history_shape, action_shape, self.device)
+                                      obs_history_shape, action_shape, action_woc_shape, self.device)
 
     def test_mode(self):
         self.actor_critic.test()

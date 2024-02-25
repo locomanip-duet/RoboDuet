@@ -274,6 +274,7 @@ class LeggedRobot(BaseTask):
         self._get_object_pose_in_ee()
         self._get_object_abg_in_ee()
         
+        self.last_plan_actions[:] = self.plan_actions[:]
         self.last_last_actions[:] = self.last_actions[:]
         self.last_actions[:] = self.actions[:]
         self.last_last_joint_pos_target[:] = self.last_joint_pos_target[:]
@@ -312,17 +313,17 @@ class LeggedRobot(BaseTask):
         self.delta_z = l_align*torch.sin(p_align) + 0.38 -self.base_pos[:, 2]
         
         if global_switch.switch_open and self.cfg.hybrid.rewards.use_terminal_pitch:
-            # reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
-            # reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
-            reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.commands_arm[:, 1] < 0.0) # lpy
-            reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.commands_arm[:, 1] > 0.0) # lpy
+            reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z > self.cfg.hybrid.rewards.headupdown_thres) # lpy
+            # reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.commands_arm[:, 1] < 0.0) # lpy
+            # reverse_buf4 = torch.logical_and(self.pitch > self.cfg.hybrid.rewards.terminal_body_pitch, self.commands_arm[:, 1] > 0.0) # lpy
             # filter = self.pitch < 0
             self.reverse_buf |= reverse_buf3 | reverse_buf4 
             # self.reverse_buf |= filter
 
         if global_switch.switch_open:
             # NOTE 如果 resample arm action 会导致出问题，身体还没矫正，因此在走到 0.6 路程的时候进行判断
-            time_exceed_half = (self.arm_time_buf / (self.T_trajs / self.dt)) > 0.2
+            time_exceed_half = (self.arm_time_buf / (self.T_trajs / self.dt)) > 0.6
             self.reverse_buf = self.reverse_buf & time_exceed_half
             self.reset_buf |= self.reverse_buf
         
@@ -379,6 +380,7 @@ class LeggedRobot(BaseTask):
                 self.extras["train/episode"]['rew_' + key] = torch.mean(
                     self.episode_sums[key][train_env_ids])
                 self.episode_sums[key][train_env_ids] = 0.
+                
         eval_env_ids = env_ids[env_ids >= self.num_train_envs]
         if len(eval_env_ids) > 0:
             self.extras["eval/episode"] = {}
@@ -606,6 +608,10 @@ class LeggedRobot(BaseTask):
         for i in range(len(reward_scales)):
             name = self.reward_names[i]
             rew = self.reward_functions[i]() * reward_scales[name]
+            
+            if name in ['vis_manip_commands_tracking_lpy', 'vis_manip_commands_tracking_rpy']:
+                self.episode_sums[name] += rew
+                continue
             
             self.rew_buf_dog += rew
             if torch.sum(rew) >= 0:
@@ -1435,6 +1441,7 @@ class LeggedRobot(BaseTask):
         self.forces = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
         self.force_positions = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
         self.num_plan_actions = self.cfg.arm.num_actions_arm_cd - self.num_actions_arm
+        self.last_plan_actions = torch.zeros(self.num_envs, self.num_plan_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.plan_actions = torch.zeros(self.num_envs, self.num_plan_actions, dtype=torch.float, device=self.device, requires_grad=False)
 
     def _init_custom_buffers__(self):
@@ -1769,6 +1776,7 @@ class LeggedRobot(BaseTask):
             
             pos = put_text_func(f'x_vel={self.commands_dog[0, 0]:.3f}', pos)
             pos = put_text_func(f'yaw_vel={self.commands_dog[0, 2]:.3f}', pos)
+            pos = put_text_func(f'[contrl] pitch={self.commands_dog[0, 3]:.3f}, roll={self.commands_dog[0, 4]:.3f}', pos)
             
             for i, command in enumerate(['l', 'p', 'y']):
                 pos = put_text_func(f'{command}={self.commands_arm[0, i]:.3f}', pos)
@@ -1777,8 +1785,7 @@ class LeggedRobot(BaseTask):
             pos = put_text_func(f"arm kp={self.cfg.arm.control.stiffness_arm['joint']:.1f} kd={self.cfg.arm.control.damping_arm['joint']:.1f}", pos)
             pos = put_text_func(f"base height={self.root_states[0, 2]:.3f}", pos)
             pos = put_text_func(f"delta z={self.delta_z[0]:.3f}", pos)
-            pos = put_text_func(f"body pitch={self.pitch[0]:.3f}", pos)
-            pos = put_text_func(f"body roll={self.roll[0]:.3f}", pos)
+            pos = put_text_func(f"'[body] pitch={self.pitch[0]:.3f}, roll={self.roll[0]:.3f}", pos)
             # pos = put_text_func(f"new rpy = {self.r.item():3f}, {self.p.item():3f}, {self.y.item():3f}", pos)
             
             self.video_frames.append(self.video_frame)

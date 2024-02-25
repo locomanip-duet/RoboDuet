@@ -52,7 +52,7 @@ class RunnerArgs(PrefixProto, cli=False):
 
     # logging
     save_interval = 400  # check for potential saves every this many iterations
-    save_video_interval = 100
+    save_video_interval = 400
     log_freq = 10
 
     # load and resume
@@ -127,7 +127,8 @@ class Runner:
             [self.env.cfg.arm.arm_num_observations],
             [self.env.cfg.arm.arm_num_privileged_obs],
             [self.env.cfg.arm.arm_num_obs_history],
-            [self.env.cfg.arm.num_actions_arm_cd])
+            [self.env.cfg.arm.num_actions_arm_cd],
+            [self.env.cfg.arm.num_actions_arm])
 
         self.alg_dog = PPO(self.dog_model, device=self.device)
         self.alg_dog.init_storage(
@@ -136,7 +137,8 @@ class Runner:
             [self.env.cfg.dog.dog_num_observations],
             [self.env.cfg.dog.dog_num_privileged_obs],
             [self.env.cfg.dog.dog_num_obs_history],
-            [self.env.cfg.dog.dog_actions])
+            [self.env.cfg.dog.dog_actions],
+            [self.env.cfg.dog.dog_actions],)
 
         self.tot_timesteps = 0
         self.tot_time = 0

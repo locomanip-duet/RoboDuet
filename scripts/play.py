@@ -25,7 +25,7 @@ def load_dog_policy(logdir, Cfg):
                                 Cfg.dog.dog_actions,
                                 ).to("cpu")
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_042000.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_dog/ac_weights_030000.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
     actor_critic.load_state_dict(ckpt)
@@ -53,7 +53,7 @@ def load_arm_policy(logdir, Cfg):
     ).to('cpu')
     
     device = torch.device("cpu")
-    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_042000.pt', map_location=device)
+    ckpt = torch.load(logdir + '/checkpoints_arm/ac_weights_030000.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
     actor_critic.eval()
@@ -69,7 +69,7 @@ def load_arm_policy(logdir, Cfg):
 
     return policy
 
-logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/arx_last/2024-02-17/auto_train/093028.751491_seed2045"
+logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/arx_last/2024-02-23/auto_train/194313.548181_seed7494"
 
 
 moving = False
@@ -118,6 +118,7 @@ def play_go1(headless=True):
             t1 = time.time()
             obs = env.get_arm_observations()
             actions_arm = arm_policy(obs)
+            # print("actions arm: ", actions_arm)
             env.plan(actions_arm[..., -2:])
             dog_obs = env.get_dog_observations()
             actions_dog = dog_policy(dog_obs)
