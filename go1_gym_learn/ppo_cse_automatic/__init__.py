@@ -65,7 +65,7 @@ class ArmRunnerArgs(PrefixProto, cli=False):
     resume = False
     
 class DogRunnerArgs(PrefixProto, cli=False):
-    resume_path = '/home/pi7113t/controller/hybrid/walk-these-ways/runs/arx_last/2024-02-09/auto_train/001728.314745_seed7009/checkpoints_dog/ac_weights_009600.pt'
+    resume_path = '/home/pgp/agile/hybrid_improve_dwb/runs/arx_last/2024-02-09/auto_train/001728.314745_seed7009/checkpoints_dog/ac_weights_009600.pt'
     resume = True
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
@@ -128,7 +128,7 @@ class Runner:
             [self.env.cfg.arm.arm_num_privileged_obs],
             [self.env.cfg.arm.arm_num_obs_history],
             [self.env.cfg.arm.num_actions_arm_cd],
-            [self.env.cfg.arm.num_actions_arm])
+            [self.env.cfg.arm.num_actions_arm_cd])
 
         self.alg_dog = PPO(self.dog_model, device=self.device)
         self.alg_dog.init_storage(

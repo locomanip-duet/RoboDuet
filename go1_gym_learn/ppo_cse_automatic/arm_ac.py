@@ -83,7 +83,7 @@ class ArmctorCritic(nn.Module):
         # Action noise
         # self.std = nn.Parameter(ARMAC_Args.init_noise_std * torch.ones(num_actions))
         self.std = torch.ones(num_actions, device=kwargs['device']) * ArmAC_Args.init_noise_std
-        self.std[-2:] = 1e-8  # deterministic for the last two actions
+        self.std[-2:] = 0.1  # deterministic for the last two actions
         self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
@@ -117,16 +117,15 @@ class ArmctorCritic(nn.Module):
         latent = self.adaptation_module(observation_history)
         mean = self.actor_body(torch.cat((observation_history, latent), dim=-1))
         mean[..., -2:] = torch.nn.functional.tanh(mean[..., -2:])
-        self.distribution = Normal(mean[..., :-2], mean[..., :-2] * 0. + self.std[..., :-2])
+        self.distribution = Normal(mean, mean * 0. + self.std)
         # print("std: ", self.std)
-        return mean[..., -2:]
 
     def act(self, observation_history, **kwargs):
-        a_ctrl = self.update_distribution(observation_history)
-        return torch.concat([self.distribution.sample(), a_ctrl], dim=-1)
+        self.update_distribution(observation_history)
+        return self.distribution.sample()
 
     def get_actions_log_prob(self, actions):
-        return self.distribution.log_prob(actions[..., :-2]).sum(dim=-1)
+        return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_expert(self, ob, policy_info={}):
         return self.act_teacher(ob["obs_history"], ob["privileged_obs"])
