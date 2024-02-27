@@ -87,7 +87,7 @@ def load_arm_policy(logdir, Cfg):
 
     return policy
 
-logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/combine/2024-01-27/auto_train/163059.957583_seed6919"
+logdir = "/home/pi7113t/controller/hybrid/walk-these-ways/runs/arx_last/2024-02-25/auto_train/164615.488924_seed1371"
 
 
 moving = False
@@ -258,7 +258,6 @@ def play_go1(headless=True):
     # plt.show()
     # cv2.waitKey(0)
 
-
 def load_env(logdir, headless=False):
     print('*'*10, logdir)
 
@@ -286,34 +285,6 @@ def load_env(logdir, headless=False):
     Cfg.terrain.mesh_type = "plane"
     if Cfg.terrain.mesh_type == "plane":
       Cfg.terrain.teleport_robots = False
-
-    Cfg.asset.render_sphere = True # NOTE no use in headless 
-    Cfg.init_state.default_joint_angles = {  # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.1,  # [rad]
-            'RL_hip_joint': 0.1,  # [rad]
-            'FR_hip_joint': -0.1,  # [rad]
-            'RR_hip_joint': -0.1,  # [rad]
-
-            'FL_thigh_joint': 0.8,  # [rad]
-            'RL_thigh_joint': 1.,  # [rad]
-            'FR_thigh_joint': 0.8,  # [rad]
-            'RR_thigh_joint': 1.,  # [rad]
-
-            'FL_calf_joint': -1.5,  # [rad]
-            'RL_calf_joint': -1.5,  # [rad]
-            'FR_calf_joint': -1.5,  # [rad]
-            'RR_calf_joint': -1.5,  # [rad]
-            'widow_waist': 0., 
-            'widow_shoulder': 0., 
-            'widow_elbow': 0., 
-            'forearm_roll': 0., 
-            'widow_wrist_angle': 0., 
-            'widow_wrist_rotate': 0., 
-            'widow_forearm_roll': 0., 
-            'gripper': 0., 
-            'widow_left_finger': 0., 
-            'widow_right_finger': 0.
-        }
 
     # turn off DR for evaluation script
     Cfg.domain_rand.push_robots = False
@@ -370,6 +341,8 @@ def load_env(logdir, headless=False):
     arm_policy = load_arm_policy(logdir, Cfg)
 
     return env, dog_policy, arm_policy
+
+
 
 
 

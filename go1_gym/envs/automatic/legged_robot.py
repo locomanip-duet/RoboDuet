@@ -310,7 +310,7 @@ class LeggedRobot(BaseTask):
             
         p_align = self.commands_arm[:, 1]
         l_align = self.commands_arm[:, 0]
-        self.delta_z = l_align*torch.sin(p_align) + 0.38 -self.base_pos[:, 2]
+        self.delta_z = l_align*torch.sin(p_align) + 0.38 - self.base_pos[:, 2]
         
         if global_switch.switch_open and self.cfg.hybrid.rewards.use_terminal_pitch:
             reverse_buf3 = torch.logical_and(self.pitch < -self.cfg.hybrid.rewards.terminal_body_pitch, self.delta_z < -self.cfg.hybrid.rewards.headupdown_thres) # lpy
