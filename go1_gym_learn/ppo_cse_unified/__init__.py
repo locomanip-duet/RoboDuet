@@ -216,7 +216,7 @@ class Runner:
                 for key, value in change_setting.items():
                     setattr(self.env.cfg.rewards, key, value)
                         
-            beta = global_switch.get_beta()
+            # beta = global_switch.get_beta()
             
             if self.log_dir is not None:
                 ep_string = f''
@@ -239,13 +239,16 @@ class Runner:
                     if not self.debug:
                         wandb_dict['Train_Reward_episode/' + key] = mean
                 
+                dog_action_std = self.alg.actor_critic.std_dog.clone()
+                arm_action_std = self.alg.actor_critic.std_arm.clone()
                 if not self.debug:
                     # wandb_dict["Train_Loss/adaptation_loss"] = mean_adaptation_module_loss
                     wandb_dict["Train_Loss/mean_value_loss"] = mean_value_loss_arm
                     wandb_dict["Train_Loss/mean_surrogate_loss"] = mean_surrogate_loss_arm
                     wandb_dict["Train_Loss/mean_value_loss_dog"] = mean_value_loss_dog
                     wandb_dict["Train_Loss/mean_surrogate_loss_dog"] = mean_surrogate_loss_dog
-                    
+                    wandb_dict["Train_std/arm_action_std"] = arm_action_std.mean()
+                    wandb_dict["Train_std/dog_action_std"] = dog_action_std.mean()      
             
                     if len(rewbuffer) > 0:
                         wandb_dict['Train_Total_Reward/mean_reward'] = statistics.mean(rewbuffer)
@@ -261,6 +264,8 @@ class Runner:
                 log_string += f"""\033[1m{'run_name:':>{pad}} {self.run_name}\033[0m \n"""
                 if len(rewbuffer) > 0:
                     log_string += (f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {collection_time:.3f}s, learning {learn_time:.3f}s)\n"""
+                                    f"""{'Arm action std:':>{pad}} {arm_action_std.cpu().tolist()}\n"""
+                                    f"""{'Dog action std:':>{pad}} {dog_action_std.cpu().tolist()}\n"""
                                     f"""{'Arm Value function loss:':>{pad}} {mean_value_loss_arm:.8f}\n"""
                                     f"""{'Arm Surrogate loss:':>{pad}} {mean_surrogate_loss_arm:.8f}\n"""
                                     f"""{'Dog Value function loss:':>{pad}} {mean_value_loss_dog:.8f}\n"""

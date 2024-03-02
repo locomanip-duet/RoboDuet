@@ -52,7 +52,8 @@ def train_go1(headless=True):
     Cfg.terrain.mesh_type = "plane"
     if Cfg.terrain.mesh_type == "plane":
         Cfg.terrain.teleport_robots = False
-    Cfg.control.update_obs_freq = 20 # Hz
+        
+    Cfg.control.update_obs_freq = 20  # Hz
     Cfg.env.num_actions = 18
     Cfg.env.num_observations = 63
 
@@ -65,9 +66,10 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    global_switch.pretrained_to_hybrid_start = 2000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
     global_switch.init_sigmoid_lr()
+    # global_switch.init_linear_lr()
     
     Cfg.env.priv_observe_vel = False
     Cfg.commands.global_reference = False
@@ -91,9 +93,8 @@ def train_go1(headless=True):
     
     args.log_dir = osp.join(f"{MINI_GYM_ROOT_DIR}/runs/{args.run_name}", wandb.run.name)
     args.log_dir += f'_seed{args.seed}'
+    
     if not args.debug:
-        
-        
         # Example:
         # >>> # run_log_dir
         # >>> /home/pgp/walk-these-ways/runs/wandb/run-20231231_021709-zdwnpnlq/files/2023-12-31/train_ppo/021707.917935
@@ -103,12 +104,12 @@ def train_go1(headless=True):
         # >>> 2023-12-31/train_ppo/021707.917935
         run_log_dir = osp.join(wandb.run.dir, wandb.run.name)
 
-
         #  for example: /home/pi7113t/dog/dwb-wtw/runs/wo_any_random/2023-12-31/train_ppo/021707.917935
         os.makedirs(osp.join(args.log_dir, "checkpoints_arm"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "checkpoints_dog"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "scripts"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "videos"), exist_ok=True)
+        os.makedirs(osp.join(args.log_dir, "deploy_model"), exist_ok=True)
         os.makedirs(f"{MINI_GYM_ROOT_DIR}/tmp/deploy_model", exist_ok=True)
 
         # 将版本的 commit 代码 保存到 runs

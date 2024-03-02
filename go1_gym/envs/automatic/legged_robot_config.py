@@ -39,7 +39,6 @@ class Cfg(PrefixProto, cli=False):
 
     class arm(PrefixProto, cli=False):
         num_actions_arm = 6
-        
         arm_num_privileged_obs = 9
         arm_num_observation_history = 30
         arm_num_observations = 26 - 6
@@ -52,14 +51,15 @@ class Cfg(PrefixProto, cli=False):
             angle60 = torch.deg2rad(torch.tensor(60))
             l = [0.3, 0.7]
             p = [-torch.pi*0.45 , torch.pi*0.45]  # 75 
-            # y = [-torch.pi/2 , torch.pi/2]
-            # roll_ee = [-torch.pi * 0.45, torch.pi * 0.45]
-            # pitch_ee = [-angle60 , angle60]
-            # yaw_ee = [-angle75 , angle75]
-            y = [-torch.pi/3 , torch.pi/3]
-            roll_ee = [-torch.pi/4, torch.pi/4]
-            pitch_ee = [-torch.pi/4 , torch.pi/4]
-            yaw_ee = [-torch.pi/9 , torch.pi/9]
+            y = [-torch.pi/2 , torch.pi/2]
+            roll_ee = [-torch.pi * 0.45, torch.pi * 0.45]
+            pitch_ee = [-angle60 , angle60]
+            yaw_ee = [-angle75 , angle75]
+            
+            # y = [-torch.pi/3 , torch.pi/3]
+            # roll_ee = [-torch.pi/4, torch.pi/4]
+            # pitch_ee = [-torch.pi/4 , torch.pi/4]
+            # yaw_ee = [-torch.pi/9 , torch.pi/9]
             
             T_traj = [2, 3.]
             T_force_range = [1, 4.]

@@ -116,7 +116,7 @@ class ArmctorCritic(nn.Module):
     def update_distribution(self, observation_history):
         latent = self.adaptation_module(observation_history)
         mean = self.actor_body(torch.cat((observation_history, latent), dim=-1))
-        mean[..., -2:] = torch.nn.functional.tanh(mean[..., -2:])
+        mean[..., -2:] = torch.tanh(mean[..., -2:])
         self.distribution = Normal(mean, mean * 0. + self.std)
         # print("std: ", self.std)
 

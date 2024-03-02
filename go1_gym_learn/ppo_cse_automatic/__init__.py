@@ -52,7 +52,7 @@ class RunnerArgs(PrefixProto, cli=False):
 
     # logging
     save_interval = 400  # check for potential saves every this many iterations
-    save_video_interval = 400
+    save_video_interval = 100
     log_freq = 10
 
     # load and resume
@@ -66,7 +66,7 @@ class ArmRunnerArgs(PrefixProto, cli=False):
     
 class DogRunnerArgs(PrefixProto, cli=False):
     resume_path = '/home/pgp/agile/hybrid_improve_dwb/runs/arx_last/2024-02-09/auto_train/001728.314745_seed7009/checkpoints_dog/ac_weights_009600.pt'
-    resume = True
+    resume = False
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
     if iteration >= max_iterations:
@@ -279,13 +279,17 @@ class Runner:
                     
                     if not self.debug:
                         wandb_dict['Train_Reward_episode/' + key] = mean
-                
+    
+                arm_action_std = self.alg_arm.actor_critic.std.clone()
+                dog_action_std = self.alg_dog.actor_critic.std.clone()            
                 if not self.debug:
                     # wandb_dict["Train_Loss/adaptation_loss"] = mean_adaptation_module_loss
                     wandb_dict["Train_Loss/mean_value_loss"] = mean_value_loss_arm
                     wandb_dict["Train_Loss/mean_surrogate_loss"] = mean_surrogate_loss_arm
                     wandb_dict["Train_Loss/mean_value_loss_dog"] = mean_value_loss_dog
                     wandb_dict["Train_Loss/mean_surrogate_loss_dog"] = mean_surrogate_loss_dog
+                    wandb_dict["Train_std/arm_action_std"] = arm_action_std.mean()
+                    wandb_dict["Train_std/dog_action_std"] = dog_action_std.mean()
                     
             
                     if len(rewbuffer) > 0:
@@ -301,7 +305,11 @@ class Runner:
                 log_string += f"""{'-' * width}\n"""
                 log_string += f"""\033[1m{'run_name:':>{pad}} {self.run_name}\033[0m \n"""
                 if len(rewbuffer) > 0:
+
+                    
                     log_string += (f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {collection_time:.3f}s, learning {learn_time:.3f}s)\n"""
+                                    f"""{'Arm action std:':>{pad}} {arm_action_std.cpu().tolist()}\n"""
+                                    f"""{'Dog action std:':>{pad}} {dog_action_std.cpu().tolist()}\n"""
                                     f"""{'Arm Value function loss:':>{pad}} {mean_value_loss_arm:.8f}\n"""
                                     f"""{'Arm Surrogate loss:':>{pad}} {mean_surrogate_loss_arm:.8f}\n"""
                                     f"""{'Arm Adaptation loss:':>{pad}} {mean_adaptation_module_loss_arm:.8f}\n"""
@@ -354,7 +362,7 @@ class Runner:
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"),
             osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
             
-        path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
+        path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_dog_path = f'{path}/adaptation_module_latest_dog.jit'
         adaptation_module_dog = copy.deepcopy(self.alg_dog.actor_critic.adaptation_module).to('cpu')
         traced_script_adaptation_module_dog = torch.jit.script(adaptation_module_dog)
@@ -375,7 +383,7 @@ class Runner:
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"), 
                         osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
         
-        path = f'{MINI_GYM_ROOT_DIR}/tmp/deploy_model'
+        path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_path = f'{path}/adaptation_module_latest_arm.jit'
         adaptation_module = copy.deepcopy(self.alg_arm.actor_critic.adaptation_module).to('cpu')
         traced_script_adaptation_module = torch.jit.script(adaptation_module)

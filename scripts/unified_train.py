@@ -70,12 +70,20 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    
+    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
+    global_switch.init_sigmoid_lr()
+        
     Cfg.env.priv_observe_vel = False
     Cfg.commands.global_reference = False
     Cfg.env.priv_observe_high_freq_goal = False
     Cfg.env.num_privileged_obs = 9
 
+    Cfg.hybrid.reward_scales.arm_control_smoothness_1 = -0.
+    Cfg.hybrid.reward_scales.arm_control_limits = -0.
+    Cfg.reward_scales.orientation_control = -0.
+            
+    # global_switch.get_reward_scales = unified_reward_scales_wrapper(global_switch)
     
     Cfg.asset.render_sphere = True # NOTE no use in headless 
     
@@ -164,11 +172,7 @@ def train_go1(headless=True):
 
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)
-    
-    global_switch.pretrained_to_hybrid_start = 0  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 5000
-    global_switch.get_reward_scales = unified_reward_scales_wrapper(global_switch)
-    
+
     gpu_id = args.sim_device.split(":")[-1]
     runner = Runner(env, device=f"cuda:{gpu_id}", run_name=args.run_name, resume=args.resume, log_dir=args.log_dir, debug=args.debug)
     runner.learn(num_learning_iterations=args.num_learning_iterations, init_at_random_ep_len=True, eval_freq=args.eval_freq)

@@ -20,6 +20,10 @@ class GlobalSwitch():
         divide = np.linspace(-7, 7, range_len)
         self.lr_down = 1-sigmoid(divide)
         
+    def init_linear_lr(self):
+        range_len = self.pretrained_to_hybrid_end - self.pretrained_to_hybrid_start
+        self.lr_down = np.linspace(1, 0, range_len)
+        
     def set_reward_scales(self, hybrid_reward_scales, pretrained_reward_scales):
         self.hybrid_reward_scales = hybrid_reward_scales
         self.pretrained_reward_scales = pretrained_reward_scales
