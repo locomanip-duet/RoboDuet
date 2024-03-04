@@ -360,7 +360,7 @@ class Runner:
     def save_dog(self, it):
         torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"),
-            osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
+            osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
             
         path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_dog_path = f'{path}/adaptation_module_latest_dog.jit'
@@ -375,13 +375,13 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_dog_path)
         wandb.save(body_dog_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/a_ac_weights_last_dog.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
 
             
     def save_arm(self, it):
         torch.save(self.alg_arm.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"), 
-                        osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
+                        osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
         
         path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_path = f'{path}/adaptation_module_latest_arm.jit'
@@ -396,7 +396,7 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_path)
         wandb.save(body_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/a_ac_weights_last_arm.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
 
     def save_cv(self, frames, it):
         # fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 指定编码器（此处使用MP4V编码器）

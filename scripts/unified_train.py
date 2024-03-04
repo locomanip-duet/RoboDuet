@@ -71,7 +71,7 @@ def train_go1(headless=True):
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
     global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2000
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 5000
     global_switch.init_sigmoid_lr()
         
     Cfg.env.priv_observe_vel = False
@@ -213,6 +213,6 @@ if __name__ == '__main__':
         args.tags.append("resume")
 
     args.seed = set_seed(args.seed)
-    args.tags.append(f"_seed{args.seed}")
+    args.tags.append(f"seed{args.seed}")
     # to see the environment rendering, set headless=False
     train_go1(args)

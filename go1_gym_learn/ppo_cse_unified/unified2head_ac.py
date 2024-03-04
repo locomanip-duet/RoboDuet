@@ -9,11 +9,11 @@ from torch.distributions import Normal
 class Unified2AC_Args(PrefixProto, cli=False):
     # policy
     init_noise_std = 1.0
-    actor_hidden_dims =  [512 + 256, 256 + 128, 128 + 64]
-    critic_hidden_dims = [512 + 256, 256 + 128, 128 + 64]
+    actor_hidden_dims = [512 * 2, 256 * 2, 128 * 2]
+    critic_hidden_dims = [512 * 2, 256 * 2, 128 * 2]
     activation = 'elu'  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
 
-    adaptation_module_branch_hidden_dims = [256 + 128, 128 + 64]
+    adaptation_module_branch_hidden_dims = [256 * 2, 128 * 2]
 
     use_decoder = False
 

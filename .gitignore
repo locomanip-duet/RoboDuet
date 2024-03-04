@@ -72,3 +72,5 @@ tmp
 wandb/*
 
 */__pycache__/*
+
+old_runs/*

@@ -216,7 +216,7 @@ class Runner:
                 for key, value in change_setting.items():
                     setattr(self.env.cfg.rewards, key, value)
                         
-            # beta = global_switch.get_beta()
+            beta = global_switch.get_beta()
             
             if self.log_dir is not None:
                 ep_string = f''
@@ -311,7 +311,7 @@ class Runner:
     def save(self, it):
         torch.save(self.alg.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_unified/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_unified/ac_weights_{it:06d}.pt"),
-            osp.join(self.log_dir, f"checkpoints_unified/a_ac_weights_last.pt"))
+            osp.join(self.log_dir, f"checkpoints_unified/ac_weights_last.pt"))
             
         path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_path = f'{path}/adaptation_module_latest.jit'
@@ -326,7 +326,7 @@ class Runner:
         # save to wandb
         wandb.save(adaptation_module_path)
         wandb.save(body_path)
-        wandb.save(osp.join(self.log_dir, f"checkpoints_unified/a_ac_weights_last.pt"))
+        wandb.save(osp.join(self.log_dir, f"checkpoints_unified/ac_weights_last.pt"))
 
     def save_cv(self, frames, it):
         # fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 指定编码器（此处使用MP4V编码器）
