@@ -66,12 +66,22 @@ class LeggedRobot(BaseTask):
         self.record_eval_now = False
         self.collecting_evaluation = False
         self.num_still_evaluating = 0
+        self.fixed_cam = False
 
         self.arm_time_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
         self.force_time_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_F, "fixed_cam")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_S, "save_image")
 
     def render_gui(self, sync_frame_time=True):
         if self.viewer:
+            if self.fixed_cam:
+                cam_target = gymapi.Vec3(self.root_states[0, 0], self.root_states[0, 1], self.root_states[0, 2])
+                cam_pos = cam_target + gymapi.Vec3(1, 1, 1)
+                self.gym.viewer_camera_look_at(self.viewer, self.envs[0], cam_pos, cam_target)
+            
             # check for window closed
             if self.gym.query_viewer_has_closed(self.viewer):
                 sys.exit()
@@ -82,6 +92,21 @@ class LeggedRobot(BaseTask):
                     sys.exit()
                 elif evt.action == "toggle_viewer_sync" and evt.value > 0:
                     self.enable_viewer_sync = not self.enable_viewer_sync
+                elif evt.action == 'fixed_cam' and evt.value > 0:
+                    self.fixed_cam = not self.fixed_cam
+                elif evt.action == 'save_image' and evt.value > 0:
+                    self.gym.step_graphics(self.sim)
+                    self.gym.render_all_camera_sensors(self.sim)
+                    cam_target = gymapi.Vec3(self.root_states[0, 0], self.root_states[0, 1], self.root_states[0, 2])
+                    cam_pos = cam_target + gymapi.Vec3(0.8, 0.8, 0.8)
+                    self.gym.set_camera_location(self.rendering_camera, self.envs[0], cam_pos, cam_target)
+                    video_frame = self.gym.get_camera_image(self.sim, self.envs[0], self.rendering_camera,
+                                                                gymapi.IMAGE_COLOR)
+                    video_frame = video_frame.reshape((self.camera_props.height, self.camera_props.width, 4))
+                    import matplotlib.pyplot as plt
+
+                    # Save the image as now.png
+                    plt.imsave('now.png', video_frame)
 
             # fetch results
             if self.device != 'cpu':

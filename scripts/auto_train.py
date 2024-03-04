@@ -68,6 +68,20 @@ def train_go1(headless=True):
     Cfg.rewards.use_terminal_body_height = True
     global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0
+    
+
+    if args.wo_two_stage:
+        global_switch.pretrained_to_hybrid_start = 0
+
+
+    if args.debug or args.offline:
+        if global_switch.pretrained_to_hybrid_start > 0:
+            global_switch.pretrained_to_hybrid_start = 2  # 2000 with pretrained, 10000 from scratch
+        global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2
+        RunnerArgs.save_interval = 2
+        RunnerArgs.save_video_interval = 10
+    
+    
     global_switch.init_sigmoid_lr()
     # global_switch.init_linear_lr()
     
@@ -188,6 +202,7 @@ if __name__ == '__main__':
     parser.add_argument('--tags', nargs='+', default=[])
     parser.add_argument('--notes', type=str, default=None)
     parser.add_argument('--seed', type=int, default=-1)
+    parser.add_argument('--wo_two_stage', action='store_true', default=False)
 
     args = parser.parse_args()
 
