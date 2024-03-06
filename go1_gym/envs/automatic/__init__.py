@@ -63,6 +63,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                 obs_buf,
                 (self.obj_obs_pose_in_ee[:]),
             (self.obj_obs_abg_in_ee[:]),
+                # self.commands_arm[:, :6],
                 roll.unsqueeze(1),
                 pitch.unsqueeze(1),
             ), dim=-1)
