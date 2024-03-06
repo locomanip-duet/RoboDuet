@@ -66,7 +66,7 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    global_switch.pretrained_to_hybrid_start = 2000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0
     
 
@@ -177,7 +177,10 @@ def train_go1(headless=True):
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/dog_ac.py", policy="now")
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/ppo_ac.py", policy="now")
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", policy="now")
-        
+        wandb.log({
+            "Global_Switch/start": global_switch.pretrained_to_hybrid_start,
+            "Global_Switch/end": global_switch.pretrained_to_hybrid_end,
+            }, step=0)
 
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)

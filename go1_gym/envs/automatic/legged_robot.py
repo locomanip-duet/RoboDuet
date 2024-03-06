@@ -864,11 +864,20 @@ class LeggedRobot(BaseTask):
         self.commands_arm[env_ids, 2] = torch_rand_float(self.cfg.arm.commands.y[0], self.cfg.arm.commands.y[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         # self.generate_rpy_commands(env_ids)
         
+        self.commands_arm_obs[env_ids, 0] = torch_rand_float(self.cfg.arm.commands.l[0], self.cfg.arm.commands.l[1], (env_ids.shape[0], 1), device=self.device).squeeze()
+        self.commands_arm_obs[env_ids, 1] = torch_rand_float(self.cfg.arm.commands.p[0], self.cfg.arm.commands.p[1], (env_ids.shape[0], 1), device=self.device).squeeze()
+        self.commands_arm_obs[env_ids, 2] = torch_rand_float(self.cfg.arm.commands.y[0], self.cfg.arm.commands.y[1], (env_ids.shape[0], 1), device=self.device).squeeze()
+        
         roll = torch_rand_float(self.cfg.arm.commands.roll_ee[0], self.cfg.arm.commands.roll_ee[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         pitch = torch_rand_float(self.cfg.arm.commands.pitch_ee[0], self.cfg.arm.commands.pitch_ee[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         yaw = torch_rand_float(self.cfg.arm.commands.yaw_ee[0], self.cfg.arm.commands.yaw_ee[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         # pitch = torch.ones((env_ids.shape[0], 1), device=self.device).squeeze() * torch.pi/4
         # yaw = torch.ones((env_ids.shape[0], 1), device=self.device).squeeze() * torch.pi/4
+        
+        self.commands_arm_obs[env_ids, 3] = roll
+        self.commands_arm_obs[env_ids, 4] = pitch
+        self.commands_arm_obs[env_ids, 5] = yaw
+        
         zero_vec = torch.zeros_like(roll)
         q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
         q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
@@ -1313,6 +1322,9 @@ class LeggedRobot(BaseTask):
         
         self.commands_arm = torch.zeros(self.num_envs, self.cfg.arm.arm_num_commands, dtype=torch.float,
                                           device=self.device, requires_grad=False)  # lpy, rpy for transfer to camera base
+        self.commands_arm_obs = torch.zeros(self.num_envs, self.cfg.arm.arm_num_commands, dtype=torch.float,
+                                          device=self.device, requires_grad=False)  # lpy, rpy for transfer to camera base
+        
         self.end_effector_state = self.rigid_body_state.view(self.num_envs, self.num_bodies, 13)[:, self.ee_idx] # link6
         self.x_vector = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.y_vector = to_torch([0., 1., 0.], device=self.device).repeat((self.num_envs, 1))

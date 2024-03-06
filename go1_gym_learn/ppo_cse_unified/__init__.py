@@ -12,7 +12,6 @@ import cv2
 import imageio
 import numpy as np
 import torch
-from ml_logger import logger
 from params_proto import PrefixProto
 
 import wandb

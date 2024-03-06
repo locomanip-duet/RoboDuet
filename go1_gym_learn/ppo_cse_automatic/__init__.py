@@ -12,7 +12,6 @@ import cv2
 import imageio
 import numpy as np
 import torch
-from ml_logger import logger
 from params_proto import PrefixProto
 
 import wandb
@@ -66,7 +65,7 @@ class ArmRunnerArgs(PrefixProto, cli=False):
     
 class DogRunnerArgs(PrefixProto, cli=False):
     resume_path = 'old_runs/arx_last/2024-02-09/auto_train/001728.314745_seed7009/checkpoints_dog/ac_weights_009600.pt'
-    resume = True
+    resume = False
 
 def custom_decay_reward_scale(iteration, initial_scale=1.5, final_scale=0.8, max_iterations=8000):
     if iteration >= max_iterations:
