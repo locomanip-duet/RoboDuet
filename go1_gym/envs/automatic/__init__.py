@@ -362,6 +362,19 @@ class HistoryWrapper(gym.Wrapper):
         self.dog_obs_history = torch.cat((self.dog_obs_history[:, self.env.cfg.dog.dog_num_observations:], obs), dim=-1)
         return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.dog_obs_history}
     
+    def get_dog_observations_hand(self, pose_in_ee):
+        obs, privileged_obs = self.env.get_dog_observations()
+        obs[:, 44:50] = pose_in_ee
+        self.dog_obs_history = torch.cat((self.dog_obs_history[:, self.env.cfg.dog.dog_num_observations:], obs), dim=-1)
+        return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.dog_obs_history}
+    
+    def get_arm_observations_hand(self, pose_in_ee):
+        obs, privileged_obs = self.env.get_arm_observations()
+        obs[:, 12:18] = pose_in_ee
+        self.dog_obs_history = torch.cat((self.dog_obs_history[:, self.env.cfg.dog.dog_num_observations:], obs), dim=-1)
+        return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.dog_obs_history}
+    
+    
     def get_arm_observations(self):
         obs, privileged_obs = self.env.get_arm_observations()
         self.arm_obs_history = torch.cat((self.arm_obs_history[:, self.env.cfg.arm.arm_num_observations:], obs), dim=-1)
