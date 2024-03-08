@@ -864,9 +864,9 @@ class LeggedRobot(BaseTask):
         self.commands_arm[env_ids, 2] = torch_rand_float(self.cfg.arm.commands.y[0], self.cfg.arm.commands.y[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         # self.generate_rpy_commands(env_ids)
         
-        self.commands_arm_obs[env_ids, 0] = torch_rand_float(self.cfg.arm.commands.l[0], self.cfg.arm.commands.l[1], (env_ids.shape[0], 1), device=self.device).squeeze()
-        self.commands_arm_obs[env_ids, 1] = torch_rand_float(self.cfg.arm.commands.p[0], self.cfg.arm.commands.p[1], (env_ids.shape[0], 1), device=self.device).squeeze()
-        self.commands_arm_obs[env_ids, 2] = torch_rand_float(self.cfg.arm.commands.y[0], self.cfg.arm.commands.y[1], (env_ids.shape[0], 1), device=self.device).squeeze()
+        self.commands_arm_obs[env_ids, 0] = self.commands_arm[env_ids, 0]
+        self.commands_arm_obs[env_ids, 1] = self.commands_arm[env_ids, 1]
+        self.commands_arm_obs[env_ids, 2] = self.commands_arm[env_ids, 2]
         
         roll = torch_rand_float(self.cfg.arm.commands.roll_ee[0], self.cfg.arm.commands.roll_ee[1], (env_ids.shape[0], 1), device=self.device).squeeze()
         pitch = torch_rand_float(self.cfg.arm.commands.pitch_ee[0], self.cfg.arm.commands.pitch_ee[1], (env_ids.shape[0], 1), device=self.device).squeeze()
