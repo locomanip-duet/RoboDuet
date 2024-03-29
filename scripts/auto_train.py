@@ -66,7 +66,7 @@ def train_go1(headless=True):
     Cfg.reward_scales.jump = -0.00
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
-    global_switch.pretrained_to_hybrid_start = 2000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_start = 12000  # 2000 with pretrained, 10000 from scratch
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0
     
 
@@ -81,10 +81,12 @@ def train_go1(headless=True):
         RunnerArgs.save_interval = 2
         RunnerArgs.save_video_interval = 10
     
-    
-    global_switch.init_sigmoid_lr()
-    # global_switch.init_linear_lr()
-    
+    Cfg.commands.T_force_range = [2, 4.]
+    Cfg.domain_rand.randomize_end_effector_force = True
+    Cfg.commands.add_force_thres = 0.3
+    Cfg.domain_rand.max_force = 15
+    Cfg.domain_rand.max_force_offset = 0.01
+
     Cfg.env.priv_observe_vel = False
     Cfg.commands.global_reference = False
     Cfg.env.priv_observe_high_freq_goal = False
@@ -93,6 +95,9 @@ def train_go1(headless=True):
     Cfg.env.num_privileged_obs = 9
     
     Cfg.asset.render_sphere = True # NOTE no use in headless 
+    
+    global_switch.init_sigmoid_lr()
+    # global_switch.init_linear_lr()
     
     now = datetime.now()
     stem = Path(__file__).stem

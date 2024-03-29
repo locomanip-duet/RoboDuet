@@ -237,9 +237,9 @@ class LeggedRobot(BaseTask):
         self.prev_foot_velocities = self.foot_velocities.clone()
         self.render_gui()
         for _ in range(self.cfg.control.decimation):
+            self.add_continue_force()
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
-            
             if self.cfg.env.keep_arm_fixed:
                 self._keep_arm_fixed()
             
@@ -945,11 +945,13 @@ class LeggedRobot(BaseTask):
             
         if not self.cfg.hybrid.plan_vel:
             self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
+            self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
             self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
             self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
         else:
             if not global_switch.switch_open:
                 self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
+                self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
                 self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
                 self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)   
             
@@ -1006,6 +1008,26 @@ class LeggedRobot(BaseTask):
         for curriculum in self.curricula:
             curriculum.set_to(low=low, high=high)
 
+
+    def resample_force(self, env_ids):
+        self.ee_forces[env_ids, self.ee_idx] = torch_rand_float(-self.cfg.domain_rand.max_force, self.cfg.domain_rand.max_force, (len(env_ids), 3), device=self.device)
+
+        # 单个相同力的持续时间
+        time_range = (self.cfg.commands.T_force_range[1] - self.cfg.commands.T_force_range[0])/self.dt
+        time_interval = torch.from_numpy(np.random.choice(int(time_range+1), len(env_ids))).to(self.device)
+        self.T_force[env_ids] = torch.ones_like(self.T_force[env_ids]) * self.cfg.commands.T_force_range[0] + time_interval * self.dt
+        self.force_time_buf[env_ids] = torch.zeros_like(self.force_time_buf[env_ids])
+        
+         # 小于add_force_thres的概率不加力
+        self.add_force_flag[env_ids] = torch.rand_like(self.add_force_flag[env_ids])
+        self.ee_forces[env_ids, self.ee_idx] *= (self.add_force_flag[env_ids] > self.cfg.commands.add_force_thres).reshape(-1, 1)
+
+    def add_continue_force(self):
+        self.force_positions = self.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
+        # offset = torch_rand_float(-self.cfg.domain_rand.max_force_offset, self.cfg.domain_rand.max_force_offset, (len(env_ids), 3), device=self.device)
+        # self.force_positions[env_ids, self.ee_idx] += offset
+        self.gym.apply_rigid_body_force_at_pos_tensors(self.sim, gymtorch.unwrap_tensor(self.ee_forces.reshape(-1, 3)), gymtorch.unwrap_tensor(self.force_positions.reshape(-1, 3)))
+
     def _post_physics_step_callback(self):
         """ Callback called before computing terminations, rewards, and observations
             Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
@@ -1016,6 +1038,10 @@ class LeggedRobot(BaseTask):
 
         traj_ids = (self.arm_time_buf % (self.T_trajs / self.dt).long()==0).nonzero(as_tuple=False).flatten()
         self._resample_arm_commands(traj_ids)
+
+        if self.cfg.domain_rand.randomize_end_effector_force:
+            traj_ids = (self.force_time_buf % (self.T_force / self.dt).long()==0).nonzero(as_tuple=False).flatten()
+            self.resample_force(traj_ids)
 
         # resample commands
         sample_interval = int(self.cfg.commands.resampling_time / self.dt)
@@ -1353,12 +1379,13 @@ class LeggedRobot(BaseTask):
         self.rew_buf_arm = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         self.rew_buf_pos_arm = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         self.rew_buf_neg_arm = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-
         self.T_trajs = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) # command 时间
-        self.T_force = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) # command 时间
-        self.add_force_flag = torch.rand(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) # command 时间
-        self.forces = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
+        
+        self.T_force = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) # ee force 时间
+        self.add_force_flag = torch.rand(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) # ee force 时间
+        self.ee_forces = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
         self.force_positions = torch.zeros_like(self.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
+        
         self.num_plan_actions = self.cfg.arm.num_actions_arm_cd - self.num_actions_arm
         self.last_plan_actions = torch.zeros(self.num_envs, self.num_plan_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.plan_actions = torch.zeros(self.num_envs, self.num_plan_actions, dtype=torch.float, device=self.device, requires_grad=False)
