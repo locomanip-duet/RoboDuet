@@ -7,7 +7,8 @@ from go1_gym.envs.automatic.legged_robot_config import Cfg
 def config_asset(Cnfg: Union[Cfg, Meta]):
 
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/widowGo1/urdf/widowGo1.urdf'
-    Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
+    # Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
+    Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/widowGo2.urdf'
     
     Cnfg.asset.penalize_contacts_on = [
         # 'base', 'trunk',
