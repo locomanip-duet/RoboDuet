@@ -82,7 +82,7 @@ def train_go1(headless=True):
         RunnerArgs.save_video_interval = 10
     
     Cfg.commands.T_force_range = [2, 4.]
-    Cfg.domain_rand.randomize_end_effector_force = True
+    Cfg.domain_rand.randomize_end_effector_force = False
     Cfg.commands.add_force_thres = 0.3
     Cfg.domain_rand.max_force = 15
     Cfg.domain_rand.max_force_offset = 0.01

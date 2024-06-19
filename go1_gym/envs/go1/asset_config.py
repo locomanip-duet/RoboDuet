@@ -9,6 +9,7 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/widowGo1/urdf/widowGo1.urdf'
     # Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
     Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/widowGo2.urdf'
+    Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2.urdf'
     
     Cnfg.asset.penalize_contacts_on = [
         # 'base', 'trunk',
@@ -19,8 +20,30 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
     Cnfg.asset.hip_joints = {'hip'}
     
     Cnfg.control.stiffness = {'joint': 35., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
-    Cnfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
-    Cnfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
+    Cnfg.arm.control.stiffness_arm = {
+            "zarx": 50,
+            "zarx_j1": 50,
+            "zarx_j2": 50,
+            "zarx_j3": 50,
+            "zarx_j4": 50,
+            "zarx_j5": 50,
+            "zarx_j6": 50,
+            "zarx_j7": 50,
+            "zarx_j8": 50,
+        
+    }  # [N*m/rad]
+    Cnfg.arm.control.damping_arm = {
+            "zarx": 20,
+            "zarx_j1": 20,
+            "zarx_j2": 20,
+            "zarx_j3": 20,
+            "zarx_j4": 20,
+            "zarx_j5": 20,
+            "zarx_j6": 20,
+            "zarx_j7": 20,
+            "zarx_j8": 20,
+    
+    }  # [N*m*s/rad]
     Cnfg.dog.control.stiffness_leg = {'joint': 35.}  # [N*m/rad]
     Cnfg.dog.control.damping_leg = {'joint': 1.}  # [N*m*s/rad]
    

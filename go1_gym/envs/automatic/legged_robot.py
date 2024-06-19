@@ -47,7 +47,9 @@ class LeggedRobot(BaseTask):
         self.initial_dynamics_dict = initial_dynamics_dict
         if eval_cfg is not None: self._parse_cfg(eval_cfg)
         self._parse_cfg(self.cfg)
-
+        self.num_actions_arm = cfg.arm.num_actions_arm
+        self.num_actions_loco = cfg.dog.num_actions_loco
+        
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless, self.eval_cfg)
 
         self._init_command_distribution(torch.arange(self.num_envs, device=self.device))
@@ -55,8 +57,7 @@ class LeggedRobot(BaseTask):
         if not self.headless:
             self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
 
-        self.num_actions_arm = cfg.arm.num_actions_arm
-        self.num_actions_loco = cfg.dog.num_actions_loco
+
         
         self._init_buffers()
 
@@ -220,7 +221,10 @@ class LeggedRobot(BaseTask):
             raise NameError(f"Unknown controller type: {control_type}")
 
         torques = torques * self.motor_strengths
-        return torch.clip(torques, -self.torque_limits, self.torque_limits)
+        torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
+        pos_target = self.joint_pos_target + self.motor_offsets
+        pos_target = pos_target * self.motor_strengths
+        return torch.concat((torques[..., :self.num_actions_loco], pos_target[..., self.num_actions_loco:]), dim=-1)
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -765,6 +769,24 @@ class LeggedRobot(BaseTask):
                 self.dof_pos_limits[i, 0] = m - 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
                 self.dof_pos_limits[i, 1] = m + 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
 
+            # import ipdb; ipdb.set_trace()
+            props["driveMode"][self.num_actions_loco:].fill(gymapi.DOF_MODE_POS)
+            props[self.num_actions_loco + 0]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j1"]
+            props[self.num_actions_loco + 1]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j2"]
+            props[self.num_actions_loco + 2]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j3"]
+            props[self.num_actions_loco + 3]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j4"]
+            props[self.num_actions_loco + 4]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j5"]
+            props[self.num_actions_loco + 5]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j6"]
+            props[self.num_actions_loco + 6]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j7"]
+            
+            props[self.num_actions_loco + 0]['damping'] = self.cfg.arm.control.damping_arm["zarx_j1"]
+            props[self.num_actions_loco + 1]['damping'] = self.cfg.arm.control.damping_arm["zarx_j2"]
+            props[self.num_actions_loco + 2]['damping'] = self.cfg.arm.control.damping_arm["zarx_j3"]
+            props[self.num_actions_loco + 3]['damping'] = self.cfg.arm.control.damping_arm["zarx_j4"]
+            props[self.num_actions_loco + 4]['damping'] = self.cfg.arm.control.damping_arm["zarx_j5"]
+            props[self.num_actions_loco + 5]['damping'] = self.cfg.arm.control.damping_arm["zarx_j6"]
+            props[self.num_actions_loco + 6]['damping'] = self.cfg.arm.control.damping_arm["zarx_j7"]
+
         return props
 
     def _randomize_rigid_body_props(self, env_ids, cfg):
@@ -1023,10 +1045,11 @@ class LeggedRobot(BaseTask):
         self.ee_forces[env_ids, self.ee_idx] *= (self.add_force_flag[env_ids] > self.cfg.commands.add_force_thres).reshape(-1, 1)
 
     def add_continue_force(self):
-        self.force_positions = self.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
-        # offset = torch_rand_float(-self.cfg.domain_rand.max_force_offset, self.cfg.domain_rand.max_force_offset, (len(env_ids), 3), device=self.device)
-        # self.force_positions[env_ids, self.ee_idx] += offset
-        self.gym.apply_rigid_body_force_at_pos_tensors(self.sim, gymtorch.unwrap_tensor(self.ee_forces.reshape(-1, 3)), gymtorch.unwrap_tensor(self.force_positions.reshape(-1, 3)))
+        if self.cfg.domain_rand.randomize_end_effector_force:
+            self.force_positions = self.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
+            # offset = torch_rand_float(-self.cfg.domain_rand.max_force_offset, self.cfg.domain_rand.max_force_offset, (len(env_ids), 3), device=self.device)
+            # self.force_positions[env_ids, self.ee_idx] += offset
+            self.gym.apply_rigid_body_force_at_pos_tensors(self.sim, gymtorch.unwrap_tensor(self.ee_forces.reshape(-1, 3)), gymtorch.unwrap_tensor(self.force_positions.reshape(-1, 3)))
 
     def _post_physics_step_callback(self):
         """ Callback called before computing terminations, rewards, and observations
@@ -1728,7 +1751,7 @@ class LeggedRobot(BaseTask):
                 pos = put_text_func(f'{command}={self.commands_arm[0, i]:.3f}', pos)
 
             pos = put_text_func(f"leg kp={self.cfg.dog.control.stiffness_leg['joint']:.1f} kd={self.cfg.dog.control.damping_leg['joint']:.1f}", pos)
-            pos = put_text_func(f"arm kp={self.cfg.arm.control.stiffness_arm['joint']:.1f} kd={self.cfg.arm.control.damping_arm['joint']:.1f}", pos)
+            pos = put_text_func(f"arm kp={self.cfg.arm.control.stiffness_arm['zarx']:.1f} kd={self.cfg.arm.control.damping_arm['zarx']:.1f}", pos)
             pos = put_text_func(f"base height={self.root_states[0, 2]:.3f}", pos)
             pos = put_text_func(f"delta z={self.delta_z[0]:.3f}", pos)
             pos = put_text_func(f"'[body] pitch={self.pitch[0]:.3f}, roll={self.roll[0]:.3f}", pos)
