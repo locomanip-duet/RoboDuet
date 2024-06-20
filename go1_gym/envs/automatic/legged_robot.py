@@ -224,6 +224,7 @@ class LeggedRobot(BaseTask):
         torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
         pos_target = self.joint_pos_target + self.motor_offsets
         pos_target = pos_target * self.motor_strengths
+        pos_target[..., -2:] = 0
         return torch.concat((torques[..., :self.num_actions_loco], pos_target[..., self.num_actions_loco:]), dim=-1)
 
     def step(self, actions):
@@ -787,6 +788,8 @@ class LeggedRobot(BaseTask):
             props[self.num_actions_loco + 5]['damping'] = self.cfg.arm.control.damping_arm["zarx_j6"]
             props[self.num_actions_loco + 6]['damping'] = self.cfg.arm.control.damping_arm["zarx_j7"]
 
+        # print(props["\veMode"])
+        
         return props
 
     def _randomize_rigid_body_props(self, env_ids, cfg):
