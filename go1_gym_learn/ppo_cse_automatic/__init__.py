@@ -19,7 +19,7 @@ from go1_gym import MINI_GYM_ROOT_DIR
 from go1_gym.envs.automatic import HistoryWrapper
 from go1_gym.utils import global_switch
 
-from .arm_ac import ArmctorCritic
+from .arm_ac import ArmActorCritic
 from .dog_ac import DogActorCritic
 from .ppo import PPO
 
@@ -92,11 +92,11 @@ class Runner:
         self.debug = debug
         self.num_steps_per_env = RunnerArgs.num_steps_per_env
         
-        self.arm_model = ArmctorCritic(
-            self.env.cfg.arm.arm_num_observations,
-            self.env.cfg.arm.arm_num_privileged_obs,
-            self.env.cfg.arm.arm_num_obs_history,
-            self.env.cfg.arm.num_actions_arm_cd,
+        self.arm_model = ArmActorCritic(
+            num_obs=self.env.cfg.arm.arm_num_observations,
+            num_privileged_obs=self.env.cfg.arm.arm_num_privileged_obs,
+            num_obs_history=self.env.cfg.arm.arm_num_obs_history,
+            num_actions=self.env.cfg.arm.num_actions_arm_cd,
             device=self.device,
         ).to(self.device)
         
@@ -188,6 +188,7 @@ class Runner:
                         
                     dog_obs_dict = self.env.get_dog_observations()
                     
+                    # initial step
                     if i == 0: pass
                     else:
                         # use for compute last value

@@ -222,9 +222,11 @@ class LeggedRobot(BaseTask):
 
         torques = torques * self.motor_strengths
         torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
+        
         pos_target = self.joint_pos_target + self.motor_offsets
         pos_target = pos_target * self.motor_strengths
-        pos_target[..., -2:] = 0
+        pos_target = torch.clip(pos_target, -10, 10)  # max rads
+    
         return torch.concat((torques[..., :self.num_actions_loco], pos_target[..., self.num_actions_loco:]), dim=-1)
 
     def step(self, actions):
@@ -245,6 +247,8 @@ class LeggedRobot(BaseTask):
             self.add_continue_force()
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+            
             if self.cfg.env.keep_arm_fixed:
                 self._keep_arm_fixed()
             
@@ -392,9 +396,9 @@ class LeggedRobot(BaseTask):
         self._resample_commands(env_ids)
         self._resample_arm_commands(env_ids)
         self._call_train_eval(self._randomize_dof_props, env_ids)
-        if self.cfg.domain_rand.randomize_rigids_after_start:
-            self._call_train_eval(self._randomize_rigid_body_props, env_ids)
-            self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
+        # if self.cfg.domain_rand.randomize_rigids_after_start:
+        #     self._call_train_eval(self._randomize_rigid_body_props, env_ids)
+        #     self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
 
         self._call_train_eval(self._reset_dofs, env_ids)
         self._call_train_eval(self._reset_root_states, env_ids)
@@ -1052,7 +1056,8 @@ class LeggedRobot(BaseTask):
             self.force_positions = self.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
             # offset = torch_rand_float(-self.cfg.domain_rand.max_force_offset, self.cfg.domain_rand.max_force_offset, (len(env_ids), 3), device=self.device)
             # self.force_positions[env_ids, self.ee_idx] += offset
-            self.gym.apply_rigid_body_force_at_pos_tensors(self.sim, gymtorch.unwrap_tensor(self.ee_forces.reshape(-1, 3)), gymtorch.unwrap_tensor(self.force_positions.reshape(-1, 3)))
+            
+            assert self.gym.apply_rigid_body_force_at_pos_tensors(self.sim, gymtorch.unwrap_tensor(self.ee_forces.reshape(-1, 3)), gymtorch.unwrap_tensor(self.force_positions.reshape(-1, 3))), "Failed to apply force at position."
 
     def _post_physics_step_callback(self):
         """ Callback called before computing terminations, rewards, and observations
@@ -1060,7 +1065,7 @@ class LeggedRobot(BaseTask):
         """
 
         # teleport robots to prevent falling off the edge
-        self._call_train_eval(self._teleport_robots, torch.arange(self.num_envs, device=self.device))
+        # self._call_train_eval(self._teleport_robots, torch.arange(self.num_envs, device=self.device))
 
         traj_ids = (self.arm_time_buf % (self.T_trajs / self.dt).long()==0).nonzero(as_tuple=False).flatten()
         self._resample_arm_commands(traj_ids)
@@ -1080,7 +1085,7 @@ class LeggedRobot(BaseTask):
             self.measured_heights = self._get_heights(torch.arange(self.num_envs, device=self.device), self.cfg)
 
         # push robots
-        self._call_train_eval(self._push_robots, torch.arange(self.num_envs, device=self.device))
+        # self._call_train_eval(self._push_robots, torch.arange(self.num_envs, device=self.device))
 
         # randomize dof properties
         env_ids = (self.episode_length_buf % int(self.cfg.domain_rand.rand_interval) == 0).nonzero(
@@ -1089,12 +1094,15 @@ class LeggedRobot(BaseTask):
 
         if self.common_step_counter % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
             self._randomize_gravity()
+        
+        #  without external gravity
         if int(self.common_step_counter - self.cfg.domain_rand.gravity_rand_duration) % int(
                 self.cfg.domain_rand.gravity_rand_interval) == 0:
             self._randomize_gravity(torch.tensor([0, 0, 0]))
-        if self.cfg.domain_rand.randomize_rigids_after_start:
-            self._call_train_eval(self._randomize_rigid_body_props, env_ids)
-            self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
+            
+        # if self.cfg.domain_rand.randomize_rigids_after_start:
+        #     self._call_train_eval(self._randomize_rigid_body_props, env_ids)
+        #     self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
 
 
 

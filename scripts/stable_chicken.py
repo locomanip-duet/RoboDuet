@@ -13,7 +13,7 @@ from go1_gym.envs import *
 from go1_gym.envs.automatic import HistoryWrapper, VelocityTrackingEasyEnv
 from go1_gym.envs.automatic.legged_robot_config import Cfg
 from go1_gym.envs.automatic.legged_robot import LeggedRobot
-from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmctorCritic
+from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmActorCritic
 from go1_gym_learn.ppo_cse_automatic.dog_ac import DogActorCritic
 from go1_gym.utils import quaternion_to_rpy, input_with_timeout
 
@@ -45,7 +45,7 @@ def load_dog_policy(logdir, Cfg):
     return policy
 
 def load_arm_policy(logdir, Cfg):
-    actor_critic = ArmctorCritic(
+    actor_critic = ArmActorCritic(
         Cfg.arm.arm_num_observations,
         Cfg.arm.arm_num_privileged_obs,
         Cfg.arm.arm_num_obs_history,

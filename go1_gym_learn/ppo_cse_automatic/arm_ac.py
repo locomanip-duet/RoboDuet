@@ -16,7 +16,7 @@ class ArmAC_Args(PrefixProto, cli=False):
     use_decoder = False
 
 
-class ArmctorCritic(nn.Module):
+class ArmActorCritic(nn.Module):
     is_recurrent = False
 
     def __init__(self, num_obs,
@@ -25,7 +25,7 @@ class ArmctorCritic(nn.Module):
                  num_actions,
                  **kwargs):
         if kwargs:
-            print("ArmctorCritic.__init__ got unexpected arguments, which will be ignored: " + str(
+            print("ArmActorCritic.__init__ got unexpected arguments, which will be ignored: " + str(
                 [key for key in kwargs.keys()]))
         self.decoder = ArmAC_Args.use_decoder
         super().__init__()

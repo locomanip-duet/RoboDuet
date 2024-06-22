@@ -6,7 +6,7 @@ import torch.optim as optim
 from params_proto import PrefixProto
 
 # from go1_gym_learn.ppo_cse_automatic import ArmctorCritic, RolloutStorage
-from .arm_ac import ArmctorCritic
+from .arm_ac import ArmActorCritic
 from .rollout_storage import RolloutStorage
 # from go1_gym_learn.ppo_cse_arm import caches
 
@@ -32,7 +32,7 @@ class PPO_Args(PrefixProto):
 
 
 class PPO:
-    actor_critic: ArmctorCritic
+    actor_critic: ArmActorCritic
 
     def __init__(self, actor_critic, device='cpu'):
 
