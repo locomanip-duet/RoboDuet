@@ -78,7 +78,7 @@ class LeggedRobot(BaseTask):
 
     def render_gui(self, sync_frame_time=True):
         if self.viewer:
-            if self.fixed_cam:
+            if self.fixed_cam:  # fixed camera to tracking the robot
                 cam_target = gymapi.Vec3(self.root_states[0, 0], self.root_states[0, 1], self.root_states[0, 2])
                 cam_pos = cam_target + gymapi.Vec3(1, 1, 1)
                 self.gym.viewer_camera_look_at(self.viewer, self.envs[0], cam_pos, cam_target)
@@ -95,6 +95,8 @@ class LeggedRobot(BaseTask):
                     self.enable_viewer_sync = not self.enable_viewer_sync
                 elif evt.action == 'fixed_cam' and evt.value > 0:
                     self.fixed_cam = not self.fixed_cam
+                    
+                # for demo
                 elif evt.action == 'save_image' and evt.value > 0:
                     self.gym.step_graphics(self.sim)
                     self.gym.render_all_camera_sensors(self.sim)
@@ -105,7 +107,6 @@ class LeggedRobot(BaseTask):
                                                                 gymapi.IMAGE_COLOR)
                     video_frame = video_frame.reshape((self.camera_props.height, self.camera_props.width, 4))
                     import matplotlib.pyplot as plt
-
                     # Save the image as now.png
                     plt.imsave('now.png', video_frame)
 
@@ -214,20 +215,30 @@ class LeggedRobot(BaseTask):
         self.joint_pos_target = actions_scaled + self.default_dof_pos
         control_type = self.cfg.control.control_type
 
-        if control_type == "P":
+        if control_type == "M":
             torques = self.p_gains * self.Kp_factors * (
                     self.joint_pos_target - self.dof_pos + self.motor_offsets) - self.d_gains * self.Kd_factors * self.dof_vel
+            
+            torques = torques * self.motor_strengths
+            torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
+            
+            pos_target = self.joint_pos_target + self.motor_offsets
+            pos_target = pos_target * self.motor_strengths
+            pos_target = torch.clip(pos_target, -10, 10)  # max rads
+            return torch.concat((torques[..., :self.num_actions_loco], pos_target[..., self.num_actions_loco:]), dim=-1)
+        
+        elif control_type == 'P':
+            torques = self.p_gains * self.Kp_factors * (
+                    self.joint_pos_target - self.dof_pos + self.motor_offsets) - self.d_gains * self.Kd_factors * self.dof_vel
+            
+            torques = torques * self.motor_strengths
+            torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
+            return torques
         else:
             raise NameError(f"Unknown controller type: {control_type}")
 
-        torques = torques * self.motor_strengths
-        torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
-        
-        pos_target = self.joint_pos_target + self.motor_offsets
-        pos_target = pos_target * self.motor_strengths
-        pos_target = torch.clip(pos_target, -10, 10)  # max rads
+
     
-        return torch.concat((torques[..., :self.num_actions_loco], pos_target[..., self.num_actions_loco:]), dim=-1)
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -307,11 +318,12 @@ class LeggedRobot(BaseTask):
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids)
-        self.compute_observations()
+        # self.compute_observations()
         
         # 放在 reward 之后 observation 之前，因为要用 self.obj_abg
-        self._get_object_pose_in_ee()
-        self._get_object_abg_in_ee()
+        if self.cfg.hybrid.use_vision:
+            self._get_object_pose_in_ee()
+            self._get_object_abg_in_ee()
         
         self.last_plan_actions[:] = self.plan_actions[:]
         self.last_last_actions[:] = self.last_actions[:]
@@ -365,7 +377,7 @@ class LeggedRobot(BaseTask):
             self.reverse_buf = self.reverse_buf & time_exceed_half
             self.reset_buf |= self.reverse_buf
         
-    def _quat_to_angle(self, quat):
+    def quat_to_angle(self, quat):
         quat = quat.to(self.device)
         y_vector = to_torch([0., 1., 0.], device=self.device).repeat((quat.shape[0], 1))
         z_vector = to_torch([0., 0., 1.], device=self.device).repeat((quat.shape[0], 1))
@@ -396,9 +408,9 @@ class LeggedRobot(BaseTask):
         self._resample_commands(env_ids)
         self._resample_arm_commands(env_ids)
         self._call_train_eval(self._randomize_dof_props, env_ids)
-        # if self.cfg.domain_rand.randomize_rigids_after_start:
-        #     self._call_train_eval(self._randomize_rigid_body_props, env_ids)
-        #     self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
+        if self.cfg.domain_rand.randomize_rigids_after_start:
+            self._call_train_eval(self._randomize_rigid_body_props, env_ids)
+            self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
 
         self._call_train_eval(self._reset_dofs, env_ids)
         self._call_train_eval(self._reset_root_states, env_ids)
@@ -666,7 +678,7 @@ class LeggedRobot(BaseTask):
         ee_in_base_quats = quat_mul(quat_conjugate(base_quats), self.end_effector_state[:, 3:7])
         # ee_in_base_quats = quat_mul(quat_conjugate(self.base_quat), self.end_effector_state[:, 3:7])
         # rpy = quaternion_to_rpy(ee_in_base_quats)
-        rpy = self._quat_to_angle(ee_in_base_quats)
+        rpy = self.quat_to_angle(ee_in_base_quats)
         
         return rpy 
 
@@ -698,16 +710,18 @@ class LeggedRobot(BaseTask):
     # ------------- Callbacks --------------
     def _call_train_eval(self, func, env_ids):
 
-        env_ids_train = env_ids[env_ids < self.num_train_envs]
-        env_ids_eval = env_ids[env_ids >= self.num_train_envs]
+        # env_ids_train = env_ids[env_ids < self.num_train_envs]
+        # env_ids_eval = env_ids[env_ids >= self.num_train_envs]
 
-        ret, ret_eval = None, None
+        # ret, ret_eval = None, None
 
-        if len(env_ids_train) > 0:
-            ret = func(env_ids_train, self.cfg)
-        if len(env_ids_eval) > 0:
-            ret_eval = func(env_ids_eval, self.eval_cfg)
-            if ret is not None and ret_eval is not None: ret = torch.cat((ret, ret_eval), axis=-1)
+        # if len(env_ids_train) > 0:
+        #     ret = func(env_ids_train, self.cfg)
+        # if len(env_ids_eval) > 0:
+        #     ret_eval = func(env_ids_eval, self.eval_cfg)
+        #     if ret is not None and ret_eval is not None: ret = torch.cat((ret, ret_eval), axis=-1)
+
+        ret = func(env_ids, self.cfg)
 
         return ret
 
@@ -856,10 +870,11 @@ class LeggedRobot(BaseTask):
         self.default_body_mass = props[0].mass
 
         # props[0].mass = self.default_body_mass + self.payloads[env_id] + 3.5
-        props[0].mass = self.default_body_mass + self.payloads[env_id] + 0.639  # 法兰固定重量
+        props[0].mass = self.default_body_mass + self.payloads[env_id]
+        # + 0.639  # 法兰固定重量
         props[0].com = gymapi.Vec3(self.com_displacements[env_id, 0], self.com_displacements[env_id, 1],
                                    self.com_displacements[env_id, 2])
-        props[self.ee_idx].mass += 100./1000  # TODO
+        props[self.ee_idx].mass += 100./1000  # TODO 相机
         
         return props
 
@@ -879,7 +894,7 @@ class LeggedRobot(BaseTask):
     
         rot_in_world = quat_mul(base_quats, self.obj_quats)
         rot_in_ee = quat_mul(quat_conjugate(self.end_effector_state[:, 3:7]), rot_in_world)
-        self.obj_abg_in_ee[:] = self._quat_to_angle(rot_in_ee)
+        self.obj_abg_in_ee[:] = self.quat_to_angle(rot_in_ee)
         # self.commands[:, 5:8] = self.obj_abg_in_ee[:]
         
         return self.obj_abg_in_ee[:]
@@ -903,10 +918,6 @@ class LeggedRobot(BaseTask):
         # pitch = torch.ones((env_ids.shape[0], 1), device=self.device).squeeze() * torch.pi/4
         # yaw = torch.ones((env_ids.shape[0], 1), device=self.device).squeeze() * torch.pi/4
         
-        self.commands_arm_obs[env_ids, 3] = roll
-        self.commands_arm_obs[env_ids, 4] = pitch
-        self.commands_arm_obs[env_ids, 5] = yaw
-        
         zero_vec = torch.zeros_like(roll)
         q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
         q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
@@ -919,15 +930,21 @@ class LeggedRobot(BaseTask):
         
         assert torch.allclose(torch.norm(self.obj_quats[env_ids], dim=1), torch.ones(len(env_ids)).to(self.device), atol=1e-5), "quats is not unit vector."
         
-        self._get_object_pose_in_ee()
-        self._get_object_abg_in_ee()
+        if self.cfg.hybrid.use_vision:
+            self._get_object_pose_in_ee()
+            self._get_object_abg_in_ee()
         
         self.visual_rpy[env_ids] = quaternion_to_rpy(self.obj_quats[env_ids]).to(self.device)
         # self.visual_quats[env_ids] = quats.to(self.device)
-        rpy = self._quat_to_angle(self.obj_quats[env_ids]).to(self.device)  # 和坐标轴的夹角
+        rpy = self.quat_to_angle(self.obj_quats[env_ids]).to(self.device)  # 和坐标轴的夹角
         self.commands_arm[env_ids, 3] = rpy[:, 0]
         self.commands_arm[env_ids, 4] = rpy[:, 1]
         self.commands_arm[env_ids, 5] = rpy[:, 2]
+        
+        # use delta angle
+        self.commands_arm_obs[env_ids, 3] = rpy[:, 0]
+        self.commands_arm_obs[env_ids, 4] = rpy[:, 1]
+        self.commands_arm_obs[env_ids, 5] = rpy[:, 2]
         
         self._resample_Traj_commands(env_ids)
 
@@ -974,13 +991,13 @@ class LeggedRobot(BaseTask):
             
         if not self.cfg.hybrid.plan_vel:
             self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
-            self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
+            # self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
             self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
             self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
         else:
             if not global_switch.switch_open:
                 self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
-                self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
+                # self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
                 self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
                 self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)   
             
@@ -1100,9 +1117,9 @@ class LeggedRobot(BaseTask):
                 self.cfg.domain_rand.gravity_rand_interval) == 0:
             self._randomize_gravity(torch.tensor([0, 0, 0]))
             
-        # if self.cfg.domain_rand.randomize_rigids_after_start:
-        #     self._call_train_eval(self._randomize_rigid_body_props, env_ids)
-        #     self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
+        if self.cfg.domain_rand.randomize_rigids_after_start:
+            self._call_train_eval(self._randomize_rigid_body_props, env_ids)
+            self._call_train_eval(self.refresh_actor_rigid_shape_props, env_ids)
 
 
 
@@ -1755,6 +1772,7 @@ class LeggedRobot(BaseTask):
             # put_text_func = lambda text, pos: cv2.putText(self.video_frame, text, (10, pos), font, font_scale, (0, 0, 0), 1, cv2.LINE_AA)
             
             pos = put_text_func(f'x_vel={self.commands_dog[0, 0]:.3f}', pos)
+            pos = put_text_func(f'y_vel={self.commands_dog[0, 1]:.3f}', pos)
             pos = put_text_func(f'yaw_vel={self.commands_dog[0, 2]:.3f}', pos)
             pos = put_text_func(f'[contrl] pitch={self.commands_dog[0, 3]:.3f}, roll={self.commands_dog[0, 4]:.3f}', pos)
             

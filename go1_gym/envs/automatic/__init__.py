@@ -28,15 +28,13 @@ class VelocityTrackingEasyEnv(LeggedRobot):
 
     def plan(self, obs):
         rescaled_obs = obs * 0.4
-        self.commands_dog[:, 3] = torch.clip(rescaled_obs[..., 0] * 0.4, self.cfg.commands.limit_body_pitch[0], self.cfg.commands.limit_body_pitch[1])  # n, 2
-        self.commands_dog[:, 4] = torch.clip(rescaled_obs[..., 1] * 0.4, self.cfg.commands.limit_body_roll[0], self.cfg.commands.limit_body_roll[1])  # n, 2
+        self.commands_dog[:, 3] = torch.clip(rescaled_obs[..., 0], self.cfg.commands.limit_body_pitch[0], self.cfg.commands.limit_body_pitch[1])  # n, 2
+        self.commands_dog[:, 4] = torch.clip(rescaled_obs[..., 1], self.cfg.commands.limit_body_roll[0], self.cfg.commands.limit_body_roll[1])  # n, 2
         
-        # print("command: ", self.commands_dog[:, 3:])
-        # print("rescaled_obs: ", rescaled_obs[..., 0:2]* 0.4)
-        # print("rescaled_obs: ", rescaled_obs[..., 0:2])
+        
         if self.cfg.hybrid.plan_vel:
-            self.commands_dog[:, 0] = torch.clip(rescaled_obs[..., 2] * 0.4, -2, 2)  # lin_vel
-            self.commands_dog[:, 2] = torch.clip(rescaled_obs[..., 3] * 0.4, -2, 2)  # ang_vel
+            self.commands_dog[:, 0] = torch.clip(rescaled_obs[..., 2], -2, 2)  # lin_vel
+            self.commands_dog[:, 2] = torch.clip(rescaled_obs[..., 3], -2, 2)  # ang_vel
         self.plan_actions[:] = rescaled_obs
 
 
@@ -47,8 +45,8 @@ class VelocityTrackingEasyEnv(LeggedRobot):
 
     def get_arm_observations(self):
         env_ids = (self.episode_length_buf % int((1.0 / self.cfg.control.update_obs_freq) / self.dt + 0.5) == 0).nonzero(as_tuple=False).flatten()
-        self.obj_obs_pose_in_ee[env_ids] = self.obj_pose_in_ee[env_ids].clone()
-        self.obj_obs_abg_in_ee[env_ids] = self.obj_abg_in_ee[env_ids].clone()
+        
+
         
         rpy = quaternion_to_rpy(self.base_quat)
         roll, pitch, yaw = rpy[:, 0], rpy[:, 1], rpy[:, 2]
@@ -59,16 +57,27 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                             self.actions[:, self.num_actions_loco:self.num_actions_loco+self.num_actions_arm]
                             ), dim=-1)
 
-        obs_buf = torch.cat(
-            (
-                obs_buf,
-            #     (self.obj_obs_pose_in_ee[:]),
-            # (self.obj_obs_abg_in_ee[:]),
-                self.commands_arm_obs[:, :6],
-                roll.unsqueeze(1),
-                pitch.unsqueeze(1),
-            ), dim=-1)
+        if self.cfg.hybrid.use_vision:
+            self.obj_obs_pose_in_ee[env_ids] = self.obj_pose_in_ee[env_ids].clone()
+            self.obj_obs_abg_in_ee[env_ids] = self.obj_abg_in_ee[env_ids].clone()
+            obs_buf = torch.cat(
+                (
+                    obs_buf,
+                    (self.obj_obs_pose_in_ee[:]),
+                    (self.obj_obs_abg_in_ee[:]),
+                    roll.unsqueeze(1),
+                    pitch.unsqueeze(1),
+                ), dim=-1)
+        else:
+            obs_buf = torch.cat(
+                (
+                    obs_buf,
+                    self.commands_arm_obs[:, :6],
+                    roll.unsqueeze(1),
+                    pitch.unsqueeze(1),
+                ), dim=-1)
 
+        
         if self.cfg.env.observe_two_prev_actions:
             obs_buf = torch.cat((obs_buf, self.last_actions), dim=-1)
 
@@ -124,7 +133,8 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                                             self.obj_pose_in_ee.clone(),
                                             self.obj_abg_in_ee.clone()),
                                             dim=1)
-   
+
+        # locol privileged obs
         lpy = self._get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
         forward = quat_apply(self.base_quat, self.forward_vec)
         yaw = torch.atan2(forward[:, 1], forward[:, 0])
@@ -156,27 +166,33 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                                 self.actions[:, :self.num_actions_loco]
                                 ), dim=-1)
 
-        obs_buf = torch.cat(
-            (obs_buf,
-                (self.commands_dog * self.commands_scale_dog)[:, :5],
-                # (self.obj_obs_pose_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
-                # (self.obj_obs_abg_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
-                (self.commands_arm_obs[:, :6]) if global_switch.switch_open else torch.zeros_like(self.commands_arm_obs[:, :6]),                
-                roll.unsqueeze(1),
-                pitch.unsqueeze(1),
-            ), dim=-1)
+        if self.cfg.hybrid.use_vision:
+            # "obj_obs_pose_in_ee/obj_obs_abg_in_ee" are already updated in the "get_arm_observations()"
+            obs_buf = torch.cat(
+                (obs_buf,
+                    (self.commands_dog * self.commands_scale_dog)[:, :5],
+                    (self.obj_obs_pose_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
+                    (self.obj_obs_abg_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
+                    roll.unsqueeze(1),
+                    pitch.unsqueeze(1),
+                ), dim=-1)
+        else:
+            obs_buf = torch.cat(
+                (obs_buf,
+                    (self.commands_dog * self.commands_scale_dog)[:, :5],
+                    (self.commands_arm_obs[:, :6]) if global_switch.switch_open else torch.zeros_like(self.commands_arm_obs[:, :6]),                
+                    roll.unsqueeze(1),
+                    pitch.unsqueeze(1),
+                ), dim=-1)
         
         if self.cfg.env.observe_two_prev_actions:
-            obs_buf = torch.cat((obs_buf,
-                                    self.last_actions), dim=-1)
+            obs_buf = torch.cat((obs_buf, self.last_actions), dim=-1)
 
         if self.cfg.env.observe_timing_parameter:
-            obs_buf = torch.cat((obs_buf,
-                                    self.gait_indices.unsqueeze(1)), dim=-1)
+            obs_buf = torch.cat((obs_buf, self.gait_indices.unsqueeze(1)), dim=-1)
 
         if self.cfg.env.observe_clock_inputs:
-            obs_buf = torch.cat((obs_buf,
-                                    self.clock_inputs), dim=-1)
+            obs_buf = torch.cat((obs_buf, self.clock_inputs), dim=-1)
 
 
         if self.cfg.env.observe_vel:
@@ -273,6 +289,9 @@ class VelocityTrackingEasyEnv(LeggedRobot):
 
         if self.cfg.env.priv_observe_desired_contact_states:
             privileged_obs_buf = torch.cat((privileged_obs_buf, self.desired_contact_states), dim=-1)
+            
+        
+        
         # privileged_obs_buf = torch.cat((privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
         # self.next_privileged_obs_buf = torch.cat((self.next_privileged_obs_buf, self.end_effector_state[:, :7]), dim=1)
         
@@ -343,15 +362,7 @@ class HistoryWrapper(gym.Wrapper):
         rew_dog, rew_arm, done, info = self.env.step(action)
 
         return rew_dog, rew_arm, done, info
-
-    def play(self, action_dog, action_arm):
-
-        action = torch.concat([action_dog, action_arm], dim=-1)  # TODO 这里需要拼接 arm 和 dog 的action
-        
-        rew_dog, rew_arm, done, info = self.env.step(action)
-
-        return rew_dog, rew_arm, done, info
-
+    
     def get_observations(self):
         obs = self.env.get_observations()
         privileged_obs = self.env.get_privileged_observations()
@@ -374,6 +385,38 @@ class HistoryWrapper(gym.Wrapper):
         obs[:, 12:18] = pose_in_ee
         self.dog_obs_history = torch.cat((self.dog_obs_history[:, self.env.cfg.dog.dog_num_observations:], obs), dim=-1)
         return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.dog_obs_history}
+    
+    def play_update_obs(self):
+        self.commands_arm_obs[0:1, 0] = self.commands_arm[0:1, 0]
+        self.commands_arm_obs[0:1, 1] = self.commands_arm[0:1, 1]
+        self.commands_arm_obs[0:1, 2] = self.commands_arm[0:1, 2]
+        
+        roll = self.commands_arm[0:1, 3].reshape(-1, 1)
+        pitch = self.commands_arm[0:1, 3].reshape(-1, 1)
+        yaw = self.commands_arm[0:1, 3].reshape(-1, 1)
+        
+        zero_vec = torch.zeros_like(roll)
+        q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
+        q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
+        q3 = quat_from_euler_xyz(roll, zero_vec, zero_vec)
+        # quats = quat_mul(q3, quat_mul(q2, q1))
+        quats = quat_mul(q1, quat_mul(q2, q3))
+        self.obj_quats[0:1] = quats.reshape(-1, 4)
+        
+        
+        self.visual_rpy[0:1] = quaternion_to_rpy(self.obj_quats[0:1]).to(self.device)
+        # self.visual_quats[0:1] = quats.to(self.device)
+        
+        
+        rpy = self.quat_to_angle(self.obj_quats[0:1]).to(self.device)  # 和坐标轴的夹角
+        self.commands_arm[0:1, 3] = rpy[:, 0]
+        self.commands_arm[0:1, 4] = rpy[:, 1]
+        self.commands_arm[0:1, 5] = rpy[:, 2]
+        
+        # use delta angle
+        self.commands_arm_obs[0:1, 3] = rpy[:, 0]
+        self.commands_arm_obs[0:1, 4] = rpy[:, 1]
+        self.commands_arm_obs[0:1, 5] = rpy[:, 2]
     
     
     def get_arm_observations(self):

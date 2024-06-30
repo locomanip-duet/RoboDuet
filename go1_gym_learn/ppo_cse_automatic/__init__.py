@@ -51,7 +51,7 @@ class RunnerArgs(PrefixProto, cli=False):
 
     # logging
     save_interval = 400  # check for potential saves every this many iterations
-    save_video_interval = 0
+    save_video_interval = 100
     log_freq = 10
 
     # load and resume
@@ -344,7 +344,7 @@ class Runner:
                             f"""{'ETA:':>{pad}} {mins:.0f} mins {secs:.1f} s\n""")
                 print(log_string)
                 
-            if not self.debug and RunnerArgs.save_video_interval:
+            if RunnerArgs.save_video_interval:
                 self.log_video(it)
 
             if not self.debug and it % RunnerArgs.save_interval == 0:
@@ -376,7 +376,6 @@ class Runner:
         wandb.save(adaptation_module_dog_path)
         wandb.save(body_dog_path)
         wandb.save(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
-
             
     def save_arm(self, it):
         torch.save(self.alg_arm.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))

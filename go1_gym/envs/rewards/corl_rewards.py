@@ -45,12 +45,12 @@ class CoRLRewards:
         diff = diff * (self.env.last_plan_actions != 0)  # ignore first step
         return torch.sum(diff, dim=1)
 
-    # def _reward_arm_control_smoothness_2(self):
-    #     # Penalize changes in actions
-    #     diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actuated_dof] - 2 * self.env.last_joint_pos_target[:, :self.env.num_actuated_dof] + self.env.last_last_joint_pos_target[:, :self.env.num_actuated_dof])
-    #     diff = diff * (self.env.last_actions[:, :self.env.num_dof] != 0)  # ignore first step
-    #     diff = diff * (self.env.last_last_actions[:, :self.env.num_dof] != 0)  # ignore second step
-    #     return torch.sum(diff, dim=1)
+    def _reward_arm_control_smoothness_2(self):
+        # Penalize changes in actions
+        diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actuated_dof] - 2 * self.env.last_joint_pos_target[:, :self.env.num_actuated_dof] + self.env.last_last_joint_pos_target[:, :self.env.num_actuated_dof])
+        diff = diff * (self.env.last_actions[:, :self.env.num_dof] != 0)  # ignore first step
+        diff = diff * (self.env.last_last_actions[:, :self.env.num_dof] != 0)  # ignore second step
+        return torch.sum(diff, dim=1)
         
     def _reward_arm_energy(self):
       

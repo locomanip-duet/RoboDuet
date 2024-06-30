@@ -22,14 +22,33 @@ from go1_gym.envs.automatic import HistoryWrapper, VelocityTrackingEasyEnv
 
 from go1_gym_learn.ppo_cse_automatic import Runner
 from go1_gym_learn.ppo_cse_automatic.ppo import PPO_Args
-from go1_gym_learn.ppo_cse_automatic import RunnerArgs
+from go1_gym_learn.ppo_cse_automatic import RunnerArgs, ArmRunnerArgs, DogRunnerArgs
 from go1_gym_learn.ppo_cse_automatic.dog_ac import DogAC_Args
 from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmAC_Args
 
 
 from go1_gym.utils import format_code, set_seed, global_switch
 
-def train_go1(headless=True):
+def train_go1(arg):
+    
+    if args.debug:
+        mode = "disabled"
+        args.num_envs = 4
+    else:
+        mode = "online"
+    
+        if args.offline:
+            mode = "offline"
+
+    if args.no_wandb:
+        mode = "disabled"
+
+    if args.resume:
+        args.tags.append("resume")
+
+    args.seed = set_seed(args.seed)
+    args.tags.append(f"seed{args.seed}")
+    
     config_go1(Cfg)
     config_wtw(Cfg)
     config_asset(Cfg)
@@ -37,7 +56,7 @@ def train_go1(headless=True):
     Cfg.commands.distributional_commands = False
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
-    Cfg.control.control_type = "P"
+    Cfg.control.control_type = "M"
     Cfg.domain_rand.added_mass_range = [-2.0, 2.0]
     Cfg.env.observe_two_prev_actions = False
     Cfg.commands.body_roll_range = [-0.4, 0.4]
@@ -60,23 +79,26 @@ def train_go1(headless=True):
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
-    Cfg.reward_scales.arm_energy = -0.00004
+    # Cfg.reward_scales.arm_energy = -0.00004
     Cfg.reward_scales.loco_energy = -0.00004
 
     Cfg.reward_scales.jump = -0.00
-    Cfg.rewards.terminal_body_height = 0.28
+    Cfg.rewards.terminal_body_height = 0.3
     Cfg.rewards.use_terminal_body_height = True
+    
+    DogRunnerArgs.resume = False
+    ArmRunnerArgs.resume = False
     global_switch.pretrained_to_hybrid_start = 12000  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0  # without mixed phase
     
 
     if args.wo_two_stage:
         global_switch.pretrained_to_hybrid_start = 0
 
 
-    if args.debug or args.offline:
+    if args.debug:
         if global_switch.pretrained_to_hybrid_start > 0:
-            global_switch.pretrained_to_hybrid_start = 2  # 2000 with pretrained, 10000 from scratch
+            global_switch.pretrained_to_hybrid_start = 2
         global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2
         RunnerArgs.save_interval = 2
         RunnerArgs.save_video_interval = 10
@@ -94,16 +116,17 @@ def train_go1(headless=True):
     Cfg.arm.arm_num_privileged_obs = 9
     Cfg.env.num_privileged_obs = 9
     
-    Cfg.asset.render_sphere = True # NOTE no use in headless 
+    Cfg.asset.render_sphere = True # NOTE no use in headless
+    Cfg.hybrid.use_vision = False
     
     global_switch.init_sigmoid_lr()
     # global_switch.init_linear_lr()
     
     now = datetime.now()
     stem = Path(__file__).stem
-    wandb.init(project="controller",
+    wandb.init(entity="RoboDuet",
+               project="go2_arx",
                group=args.run_name,
-               entity="dwb",
                mode=mode,
                notes=args.notes,
                name=f'{now.strftime("%Y-%m-%d")}/{stem}/{now.strftime("%H%M%S.%f")}',
@@ -144,7 +167,7 @@ def train_go1(headless=True):
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", f"{args.log_dir}/scripts/rollout_storage.py")
         
         
-        # # 将版本的 commit 代码 保存到 wandb
+        # 将版本的 commit 代码 保存到 wandb
         os.makedirs(f"{wandb.run.dir}/scripts", exist_ok=True)
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/auto_train.py", f"{wandb.run.dir}/scripts/auto_train.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{wandb.run.dir}/scripts/legged_robot.py")
@@ -213,23 +236,5 @@ if __name__ == '__main__':
     parser.add_argument('--wo_two_stage', action='store_true', default=False)
 
     args = parser.parse_args()
-
-    if args.debug:
-        mode = "disabled"
-        args.num_envs = 4
-    else:
-        mode = "online"
     
-        if args.offline:
-            mode = "offline"
-
-    if args.no_wandb:
-        mode = "disabled"
-
-    if args.resume:
-        args.tags.append("resume")
-
-    args.seed = set_seed(args.seed)
-    args.tags.append(f"seed{args.seed}")
-    # to see the environment rendering, set headless=False
     train_go1(args)
