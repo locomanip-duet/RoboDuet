@@ -44,6 +44,9 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
             "zarx_j8": 20,
     
     }  # [N*m*s/rad]
+    Cnfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
+    Cnfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
+
     Cnfg.dog.control.stiffness_leg = {'joint': 35.}  # [N*m/rad]
     Cnfg.dog.control.damping_leg = {'joint': 1.}  # [N*m*s/rad]
    

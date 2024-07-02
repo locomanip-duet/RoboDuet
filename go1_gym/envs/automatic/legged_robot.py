@@ -789,22 +789,23 @@ class LeggedRobot(BaseTask):
                 self.dof_pos_limits[i, 1] = m + 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
 
             # import ipdb; ipdb.set_trace()
-            props["driveMode"][self.num_actions_loco:].fill(gymapi.DOF_MODE_POS)
-            props[self.num_actions_loco + 0]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j1"]
-            props[self.num_actions_loco + 1]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j2"]
-            props[self.num_actions_loco + 2]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j3"]
-            props[self.num_actions_loco + 3]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j4"]
-            props[self.num_actions_loco + 4]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j5"]
-            props[self.num_actions_loco + 5]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j6"]
-            props[self.num_actions_loco + 6]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j7"]
-            
-            props[self.num_actions_loco + 0]['damping'] = self.cfg.arm.control.damping_arm["zarx_j1"]
-            props[self.num_actions_loco + 1]['damping'] = self.cfg.arm.control.damping_arm["zarx_j2"]
-            props[self.num_actions_loco + 2]['damping'] = self.cfg.arm.control.damping_arm["zarx_j3"]
-            props[self.num_actions_loco + 3]['damping'] = self.cfg.arm.control.damping_arm["zarx_j4"]
-            props[self.num_actions_loco + 4]['damping'] = self.cfg.arm.control.damping_arm["zarx_j5"]
-            props[self.num_actions_loco + 5]['damping'] = self.cfg.arm.control.damping_arm["zarx_j6"]
-            props[self.num_actions_loco + 6]['damping'] = self.cfg.arm.control.damping_arm["zarx_j7"]
+            if self.cfg.control.control_type == 'M':
+                props["driveMode"][self.num_actions_loco:].fill(gymapi.DOF_MODE_POS)
+                props[self.num_actions_loco + 0]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j1"]
+                props[self.num_actions_loco + 1]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j2"]
+                props[self.num_actions_loco + 2]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j3"]
+                props[self.num_actions_loco + 3]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j4"]
+                props[self.num_actions_loco + 4]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j5"]
+                props[self.num_actions_loco + 5]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j6"]
+                props[self.num_actions_loco + 6]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j7"]
+                
+                props[self.num_actions_loco + 0]['damping'] = self.cfg.arm.control.damping_arm["zarx_j1"]
+                props[self.num_actions_loco + 1]['damping'] = self.cfg.arm.control.damping_arm["zarx_j2"]
+                props[self.num_actions_loco + 2]['damping'] = self.cfg.arm.control.damping_arm["zarx_j3"]
+                props[self.num_actions_loco + 3]['damping'] = self.cfg.arm.control.damping_arm["zarx_j4"]
+                props[self.num_actions_loco + 4]['damping'] = self.cfg.arm.control.damping_arm["zarx_j5"]
+                props[self.num_actions_loco + 5]['damping'] = self.cfg.arm.control.damping_arm["zarx_j6"]
+                props[self.num_actions_loco + 6]['damping'] = self.cfg.arm.control.damping_arm["zarx_j7"]
 
         # print(props["\veMode"])
         

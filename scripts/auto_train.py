@@ -56,7 +56,7 @@ def train_go1(arg):
     Cfg.commands.distributional_commands = False
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
-    Cfg.control.control_type = "M"
+    Cfg.control.control_type = "P"
     Cfg.domain_rand.added_mass_range = [-2.0, 2.0]
     Cfg.env.observe_two_prev_actions = False
     Cfg.commands.body_roll_range = [-0.4, 0.4]
@@ -79,16 +79,16 @@ def train_go1(arg):
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
-    # Cfg.reward_scales.arm_energy = -0.00004
+    Cfg.reward_scales.arm_energy = -0.00004
     Cfg.reward_scales.loco_energy = -0.00004
 
     Cfg.reward_scales.jump = -0.00
-    Cfg.rewards.terminal_body_height = 0.3
+    Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
     
     DogRunnerArgs.resume = False
     ArmRunnerArgs.resume = False
-    global_switch.pretrained_to_hybrid_start = 12000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0  # without mixed phase
     
 

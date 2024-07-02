@@ -328,6 +328,161 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         
         return torch.stack([roll, pitch, yaw], dim=-1)
 
+
+class KeyboardWrapper(VelocityTrackingEasyEnv):
+    def __init__(self, sim_device, headless, cfg):
+        super().__init__(sim_device, headless, cfg=cfg)
+        
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_UP, "move foward")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_DOWN, "back foward")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_LEFT, "turn left")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_RIGHT, "turn right")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_U, "arm up")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_O, "arm down")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_I, "arm forward")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_K, "arm backward")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_J, "arm left")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_L, "arm right")
+        
+    def render_gui(self, sync_frame_time=True):
+        if self.viewer:
+            if self.fixed_cam:  # fixed camera to tracking the robot
+                cam_target = gymapi.Vec3(self.root_states[0, 0], self.root_states[0, 1], self.root_states[0, 2])
+                cam_pos = cam_target + gymapi.Vec3(1, 1, 1)
+                self.gym.viewer_camera_look_at(self.viewer, self.envs[0], cam_pos, cam_target)
+            
+            # check for window closed
+            if self.gym.query_viewer_has_closed(self.viewer):
+                sys.exit()
+
+            # check for keyboard events
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "QUIT" and evt.value > 0:
+                    sys.exit()
+                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self.enable_viewer_sync = not self.enable_viewer_sync
+                elif evt.action == 'fixed_cam' and evt.value > 0:
+                    self.fixed_cam = not self.fixed_cam
+                    
+                # for demo
+                elif evt.action == 'save_image' and evt.value > 0:
+                    self.gym.step_graphics(self.sim)
+                    self.gym.render_all_camera_sensors(self.sim)
+                    cam_target = gymapi.Vec3(self.root_states[0, 0], self.root_states[0, 1], self.root_states[0, 2])
+                    cam_pos = cam_target + gymapi.Vec3(0.8, 0.8, 0.8)
+                    self.gym.set_camera_location(self.rendering_camera, self.envs[0], cam_pos, cam_target)
+                    video_frame = self.gym.get_camera_image(self.sim, self.envs[0], self.rendering_camera,
+                                                                gymapi.IMAGE_COLOR)
+                    video_frame = video_frame.reshape((self.camera_props.height, self.camera_props.width, 4))
+                    import matplotlib.pyplot as plt
+                    # Save the image as now.png
+                    plt.imsave('now.png', video_frame)
+
+                elif evt.action == 'move foward' and evt.value > 0:
+                    self.commands_dog[0, 0] += 0.1
+                elif evt.action == 'back foward' and evt.value > 0:
+                    self.commands_dog[0, 0] -= 0.1
+                elif evt.action == 'turn left' and evt.value > 0:
+                    self.commands_dog[0, 2] += 0.1
+                elif evt.action == 'turn right' and evt.value > 0:
+                    self.commands_dog[0, 2] -= 0.1
+                elif evt.action == 'arm up' and evt.value > 0:
+                    self.commands_arm[0, 1] += 0.1
+                elif evt.action == 'arm down' and evt.value > 0:
+                    self.commands_arm[0, 1] -= 0.1
+                elif evt.action == 'arm forward' and evt.value > 0:
+                    self.commands_arm[0, 0] += 0.05
+                    self.commands_arm[0, 0] = torch.clip(self.commands_arm[0, 0], 0.2, 0.8)
+                elif evt.action == 'arm backward' and evt.value > 0:
+                    self.commands_arm[0, 0] -= 0.05
+                    self.commands_arm[0, 0] = torch.clip(self.commands_arm[0, 0], 0.2, 0.8)
+                elif evt.action == 'arm left' and evt.value > 0:
+                    self.commands_arm[0, 2] += 0.1
+                elif evt.action == 'arm right' and evt.value > 0:
+                    self.commands_arm[0, 2] -= 0.1
+                
+                elif evt.action in ['move foward', 'back foward', 'turn left',
+                                    'turn right', 'arm up', 'arm down',
+                                    'arm forward', 'arm backward', 'arm left',
+                                    'arm right'] and evt.value == 0:
+                    print(f"x_vel: {self.commands_dog[0, 0]:.2f}, \
+                          z_vel: {self.commands_dog[0, 2]:.2f}, \
+                          l: {self.commands_arm[0, 0]:.2f}, \
+                          p: {self.commands_arm[0, 1]:.2f}, \
+                          yaw: {self.commands_arm[0, 2]:.2f}")
+                    
+
+        # fetch results
+        if self.device != 'cpu':
+            self.gym.fetch_results(self.sim, True)
+
+        # step graphics
+        if self.enable_viewer_sync:
+            self.gym.step_graphics(self.sim)
+            self.gym.draw_viewer(self.viewer, self.sim, True)
+            if sync_frame_time:
+                self.gym.sync_frame_time(self.sim)
+        else:
+            self.gym.poll_viewer_events(self.viewer)
+
+        # render desired spheres
+        # import ipdb; ipdb.set_trace()
+        if self.cfg.asset.render_sphere:
+            self.gym.clear_lines(self.viewer)
+            self._draw_ee_ori_coord()
+            self._draw_command_ori_coord()
+            self._draw_base_ori_coord()
+    
+        self.update_arm_commands()
+
+    def update_arm_commands(self):
+        
+        self.commands_arm_obs[0:1, 0] = self.commands_arm[0:1, 0]
+        self.commands_arm_obs[0:1, 1] = self.commands_arm[0:1, 1]
+        self.commands_arm_obs[0:1, 2] = self.commands_arm[0:1, 2]
+        
+        roll = self.commands_arm[0:1, 3]
+        pitch = self.commands_arm[0:1, 4]
+        yaw = self.commands_arm[0:1, 5]
+        
+        zero_vec = torch.zeros_like(roll)
+        q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
+        q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
+        q3 = quat_from_euler_xyz(roll, zero_vec, zero_vec)
+        # quats = quat_mul(q3, quat_mul(q2, q1))
+        quats = quat_mul(q1, quat_mul(q2, q3))
+        # quats = quat_from_euler_xyz(roll, pitch, yaw)
+        # print(quats.shape)
+        self.obj_quats[0:1] = quats.reshape(-1, 4)
+        
+        assert torch.allclose(torch.norm(self.obj_quats[0:1], dim=1), torch.ones_like(self.obj_quats[0:1]).to(self.device), atol=1e-5), "quats is not unit vector."
+        
+        if self.cfg.hybrid.use_vision:
+            self._get_object_pose_in_ee()
+            self._get_object_abg_in_ee()
+        
+        self.visual_rpy[0:1] = quaternion_to_rpy(self.obj_quats[0:1]).to(self.device)
+        # self.visual_quats[0:1] = quats.to(self.device)
+        rpy = self.quat_to_angle(self.obj_quats[0:1]).to(self.device)  # 和坐标轴的夹角
+        self.commands_arm[0:1, 3] = rpy[:, 0]
+        self.commands_arm[0:1, 4] = rpy[:, 1]
+        self.commands_arm[0:1, 5] = rpy[:, 2]
+        
+        # use delta angle
+        self.commands_arm_obs[0:1, 3] = rpy[:, 0]
+        self.commands_arm_obs[0:1, 4] = rpy[:, 1]
+        self.commands_arm_obs[0:1, 5] = rpy[:, 2]
+
 class HistoryWrapper(gym.Wrapper):
 
     def __init__(self, env):
@@ -385,38 +540,6 @@ class HistoryWrapper(gym.Wrapper):
         obs[:, 12:18] = pose_in_ee
         self.dog_obs_history = torch.cat((self.dog_obs_history[:, self.env.cfg.dog.dog_num_observations:], obs), dim=-1)
         return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.dog_obs_history}
-    
-    def play_update_obs(self):
-        self.commands_arm_obs[0:1, 0] = self.commands_arm[0:1, 0]
-        self.commands_arm_obs[0:1, 1] = self.commands_arm[0:1, 1]
-        self.commands_arm_obs[0:1, 2] = self.commands_arm[0:1, 2]
-        
-        roll = self.commands_arm[0:1, 3].reshape(-1, 1)
-        pitch = self.commands_arm[0:1, 3].reshape(-1, 1)
-        yaw = self.commands_arm[0:1, 3].reshape(-1, 1)
-        
-        zero_vec = torch.zeros_like(roll)
-        q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
-        q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
-        q3 = quat_from_euler_xyz(roll, zero_vec, zero_vec)
-        # quats = quat_mul(q3, quat_mul(q2, q1))
-        quats = quat_mul(q1, quat_mul(q2, q3))
-        self.obj_quats[0:1] = quats.reshape(-1, 4)
-        
-        
-        self.visual_rpy[0:1] = quaternion_to_rpy(self.obj_quats[0:1]).to(self.device)
-        # self.visual_quats[0:1] = quats.to(self.device)
-        
-        
-        rpy = self.quat_to_angle(self.obj_quats[0:1]).to(self.device)  # 和坐标轴的夹角
-        self.commands_arm[0:1, 3] = rpy[:, 0]
-        self.commands_arm[0:1, 4] = rpy[:, 1]
-        self.commands_arm[0:1, 5] = rpy[:, 2]
-        
-        # use delta angle
-        self.commands_arm_obs[0:1, 3] = rpy[:, 0]
-        self.commands_arm_obs[0:1, 4] = rpy[:, 1]
-        self.commands_arm_obs[0:1, 5] = rpy[:, 2]
     
     
     def get_arm_observations(self):

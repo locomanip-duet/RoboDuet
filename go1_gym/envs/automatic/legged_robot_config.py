@@ -11,7 +11,7 @@ class Cfg(PrefixProto, cli=False):
         use_vision = False
         
         class rewards(PrefixProto, cli=False):
-            # terminal_body_height = 0.28
+            terminal_body_height = 0.28
             use_terminal_body_height = True
             use_terminal_roll = False
             use_terminal_pitch = True
@@ -36,7 +36,7 @@ class Cfg(PrefixProto, cli=False):
             raibert_heuristic = -0.0
             # arm_orientation_control = -0.1
             arm_control_smoothness_1 = -0.1
-            arm_control_smoothness_2 = -0.1
+            # arm_control_smoothness_2 = -0.1
             arm_control_limits = -5.
 
     class arm(PrefixProto, cli=False):
