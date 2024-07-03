@@ -8,7 +8,7 @@
     <created>2023-09-01T18:17:02</created>
     <modified>2023-09-01T18:17:02</modified>
     <unit name="meter" meter="1"/>
-    <up_axis>Z_UP</up_axis>
+    <up_axis>Y_UP</up_axis>
   </asset>
   <library_effects>
     <effect id="黑色足端_006-effect">
