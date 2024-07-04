@@ -62,7 +62,7 @@ Stephen Brawner (brawner@gmail.com)
                 filename="../dae/base.dae" />
                 <!-- <box size="0.3762 0.0935 0.114" /> -->
             </geometry>
-        </collision>
+        </F>
     </link>
 
 

@@ -90,7 +90,7 @@ Stephen Brawner (brawner@gmail.com)
     </link>
     <joint
         name="Head_upper_joint"
-        type="fixed" dont_collapse="true">
+        type="fixed">
         <origin
         xyz="0.285 0 0.01"
         rpy="0 0 0" />
@@ -128,7 +128,7 @@ Stephen Brawner (brawner@gmail.com)
     </link>
     <joint
         name="Head_lower_joint"
-        type="fixed" dont_collapse="true">
+        type="fixed">
         <origin
         xyz="0.008 0 -0.07"
         rpy="0 0 0" />
@@ -302,7 +302,7 @@ Stephen Brawner (brawner@gmail.com)
         <limit
         lower="-2.7227"
         upper="-0.83776"
-        effort="45.43"
+        effort="23.7"
         velocity="15.70" />
     </joint>
     <link
@@ -561,7 +561,7 @@ Stephen Brawner (brawner@gmail.com)
         <limit
         lower="-2.7227"
         upper="-0.83776"
-        effort="45.43"
+        effort="23.7"
         velocity="15.70" />
     </joint>
     <link
@@ -820,7 +820,7 @@ Stephen Brawner (brawner@gmail.com)
         <limit
         lower="-2.7227"
         upper="-0.83776"
-        effort="45.43"
+        effort="23.7"
         velocity="15.70" />
     </joint>
     <link
@@ -1079,7 +1079,7 @@ Stephen Brawner (brawner@gmail.com)
         <limit
         lower="-2.7227"
         upper="-0.83776"
-        effort="45.43"
+        effort="23.7"
         velocity="15.70" />
     </joint>
     <link

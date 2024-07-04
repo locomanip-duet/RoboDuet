@@ -56,7 +56,12 @@ def train_go1(arg):
     Cfg.commands.distributional_commands = False
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
-    Cfg.control.control_type = "P"
+    
+    Cfg.control.control_type = "M"
+    if Cfg.control.control_type == "P":
+        Cfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
+        Cfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
+        
     Cfg.domain_rand.added_mass_range = [-2.0, 2.0]
     Cfg.env.observe_two_prev_actions = False
     Cfg.commands.body_roll_range = [-0.4, 0.4]
