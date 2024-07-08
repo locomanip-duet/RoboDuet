@@ -30,7 +30,7 @@ if control_type == 'random':
 
 x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 0., 0.0, 0
 l_cmd, p_cmd, y_cmd = 0.5, 0.2, 0.
-roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, np.pi/4
+roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, np.pi/2
 
 
 def play_go1(headless=True):
@@ -165,7 +165,7 @@ def load_env(logdir, headless=False):
     Cfg.hybrid.rewards.use_terminal_roll = False
     Cfg.hybrid.rewards.use_terminal_pitch = False
     Cfg.arm.commands.T_traj = [20000, 30000]
-    Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2_origin.urdf'
+    # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2_origin.urdf'
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
     
     # Cfg.env.num_observations = 65

@@ -12,9 +12,11 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
     Cnfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2.urdf'
     
     Cnfg.asset.penalize_contacts_on = [
-        # 'base', 'trunk',
+        'base', 'trunk',
         "arm", "wrist", 'zarx',
-        "gripper", "thigh", "calf"]
+        "gripper", "thigh", "calf",
+        "Head"
+        ]
     Cnfg.asset.terminate_after_contacts_on = ['zarx']
     
     Cnfg.asset.hip_joints = {'hip'}
