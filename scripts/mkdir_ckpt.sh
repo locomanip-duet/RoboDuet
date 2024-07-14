@@ -1,5 +1,5 @@
 dir_name=${1}
 
-mkdir -p runs/funny/${dir_name}/checkpoints
-mkdir -p runs/funny/${dir_name}/checkpoints_arm
-mkdir -p runs/funny/${dir_name}/checkpoints_dog
+mkdir -p runs/download/${dir_name}/checkpoints
+mkdir -p runs/download/${dir_name}/checkpoints_arm
+mkdir -p runs/download/${dir_name}/checkpoints_dog

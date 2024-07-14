@@ -74,3 +74,8 @@ wandb/*
 */__pycache__/*
 
 old_runs/*
+
+evaluation/ik_solve_result
+evaluation/samples
+evaluation/solvable_points
+

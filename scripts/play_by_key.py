@@ -21,7 +21,10 @@ import threading
 
 ckpt_id = 'last'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
-
+logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
+logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
+logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
+logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/232428.254725_seed7153"  # ori-10, unlearnstd
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -52,7 +55,7 @@ def play_go1(headless=True):
     obs = env.reset()
 
     env.commands_dog[:, 0] = x_vel_cmd
-    env.commands_dog[:, 1] = 0
+    env.commands_dog[:, 1] = y_vel_cmd
     env.commands_dog[:, 2] = yaw_vel_cmd
     # env.commands_dog[:, 10] = -0.4
     # env.commands_dog[:, 11] = 0
@@ -104,9 +107,9 @@ def load_env(logdir, headless=False):
 
     with open(logdir + "/parameters.pkl", 'rb') as file:
         pkl_cfg = pkl.load(file)
-        print(pkl_cfg.keys())
         cfg = pkl_cfg["Cfg"]
-        print(cfg.keys())
+        # print(pkl_cfg.keys())
+        # print(cfg.keys())
 
         for key, value in cfg.items():
             if hasattr(Cfg, key):

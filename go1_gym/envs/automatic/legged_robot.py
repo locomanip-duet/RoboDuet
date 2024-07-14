@@ -562,7 +562,7 @@ class LeggedRobot(BaseTask):
                                             dim=1)
 
         # ee pose and quat dim=7
-        lpy = self._get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
+        lpy = self.get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
         forward = quat_apply(self.base_quat, self.forward_vec)
         yaw = torch.atan2(forward[:, 1], forward[:, 0])
         quat_base = quat_from_euler_xyz(torch.zeros_like(yaw), torch.zeros_like(yaw), yaw)
@@ -649,7 +649,7 @@ class LeggedRobot(BaseTask):
         self.command_sums["ang_vel_residual"] += (self.base_ang_vel[:, 2] - self.commands_dog[:, 2]) ** 2
         self.command_sums["ep_timesteps"] += 1
 
-    def _get_lpy_in_base_coord(self, env_ids):
+    def get_lpy_in_base_coord(self, env_ids):
         forward = quat_apply(self.base_quat[env_ids], self.forward_vec[env_ids])
         yaw = torch.atan2(forward[:, 1], forward[:, 0])
 
@@ -671,7 +671,7 @@ class LeggedRobot(BaseTask):
         return torch.stack([l, p, y_aw], dim=-1)
 
 
-    def _get_roll_pitch_yaw_in_base_coord(self, env_ids):
+    def get_roll_pitch_yaw_in_base_coord(self, env_ids):
         forward = quat_apply(self.base_quat[env_ids], self.forward_vec[env_ids])
         yaw = torch.atan2(forward[:, 1], forward[:, 0])
         base_quats = quat_from_euler_xyz(torch.zeros_like(yaw), torch.zeros_like(yaw), yaw)
@@ -938,9 +938,9 @@ class LeggedRobot(BaseTask):
         self.visual_rpy[env_ids] = quaternion_to_rpy(self.obj_quats[env_ids]).to(self.device)
         # self.visual_quats[env_ids] = quats.to(self.device)
         rpy = self.quat_to_angle(self.obj_quats[env_ids]).to(self.device)  # 和坐标轴的夹角
-        self.commands_arm[env_ids, 3] = rpy[:, 0]
-        self.commands_arm[env_ids, 4] = rpy[:, 1]
-        self.commands_arm[env_ids, 5] = rpy[:, 2]
+        # self.commands_arm[env_ids, 3] = rpy[:, 0]
+        # self.commands_arm[env_ids, 4] = rpy[:, 1]
+        # self.commands_arm[env_ids, 5] = rpy[:, 2]
         
         # use delta angle
         self.commands_arm_obs[env_ids, 3] = rpy[:, 0]
@@ -992,13 +992,13 @@ class LeggedRobot(BaseTask):
             
         if not self.cfg.hybrid.plan_vel:
             self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
-            # self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
+            self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
             self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
             self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
         else:
             if not global_switch.switch_open:
                 self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
-                # self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
+                self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
                 self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
                 self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)   
             
@@ -1071,7 +1071,11 @@ class LeggedRobot(BaseTask):
 
     def add_continue_force(self):
         if self.cfg.domain_rand.randomize_end_effector_force:
+        # if True:
             self.force_positions = self.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
+            # self.ee_forces[:, self.ee_idx] = 10
+            # self.ee_forces[:, 0] = 20
+            
             # offset = torch_rand_float(-self.cfg.domain_rand.max_force_offset, self.cfg.domain_rand.max_force_offset, (len(env_ids), 3), device=self.device)
             # self.force_positions[env_ids, self.ee_idx] += offset
             
@@ -1997,8 +2001,7 @@ class LeggedRobot(BaseTask):
         for idxs in foot_indices:
             
             idxs[(torch.norm(self.commands_dog[:, :2], dim=1) < 0.1)] = 0.25 # mark stand
-            
-            
+            # print((torch.norm(self.commands_dog[:, :2], dim=1).shape))
             stance_idxs = torch.remainder(idxs, 1) < durations
             swing_idxs = torch.remainder(idxs, 1) > durations
 

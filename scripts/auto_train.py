@@ -33,7 +33,7 @@ def train_go1(arg):
     
     if args.debug:
         mode = "disabled"
-        args.num_envs = 4
+        args.num_envs = 12
     else:
         mode = "online"
     
@@ -57,7 +57,7 @@ def train_go1(arg):
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
     
-    Cfg.control.control_type = "M"
+    Cfg.control.control_type = "P"
     if Cfg.control.control_type == "P":
         Cfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
         Cfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
@@ -92,6 +92,7 @@ def train_go1(arg):
     Cfg.rewards.use_terminal_body_height = True
     
     DogRunnerArgs.resume = False
+    DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265/checkpoints_dog/ac_weights_009600.pt'
     ArmRunnerArgs.resume = False
     global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0  # without mixed phase
@@ -164,6 +165,7 @@ def train_go1(arg):
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{args.log_dir}/scripts/legged_robot.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{args.log_dir}/scripts/legged_robot_config.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{args.log_dir}/scripts/env__init__.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/go1/asset_config.py", f"{args.log_dir}/scripts/asset_config.py")
         
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/__init__.py", f"{args.log_dir}/scripts/ppo_cse_automatic__init__.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/arm_ac.py", f"{args.log_dir}/scripts/arm_ac.py")
@@ -172,18 +174,19 @@ def train_go1(arg):
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", f"{args.log_dir}/scripts/rollout_storage.py")
         
         
+        wandb.run.log_code(f"{args.log_dir}/scripts")
         # 将版本的 commit 代码 保存到 wandb
-        os.makedirs(f"{wandb.run.dir}/scripts", exist_ok=True)
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/auto_train.py", f"{wandb.run.dir}/scripts/auto_train.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{wandb.run.dir}/scripts/legged_robot.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{wandb.run.dir}/scripts/legged_robot_config.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{wandb.run.dir}/scripts/env__init__.py")
+        # os.makedirs(f"{wandb.run.dir}/scripts", exist_ok=True)
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/auto_train.py", f"{wandb.run.dir}/scripts/auto_train.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{wandb.run.dir}/scripts/legged_robot.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{wandb.run.dir}/scripts/legged_robot_config.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{wandb.run.dir}/scripts/env__init__.py")
         
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/__init__.py", f"{wandb.run.dir}/scripts/ppo_cse_automatic__init__.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/arm_ac.py", f"{wandb.run.dir}/scripts/arm_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/dog_ac.py", f"{wandb.run.dir}/scripts/dog_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/ppo.py", f"{wandb.run.dir}/scripts/ppo.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", f"{wandb.run.dir}/scripts/rollout_storage.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/__init__.py", f"{wandb.run.dir}/scripts/ppo_cse_automatic__init__.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/arm_ac.py", f"{wandb.run.dir}/scripts/arm_ac.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/dog_ac.py", f"{wandb.run.dir}/scripts/dog_ac.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/ppo.py", f"{wandb.run.dir}/scripts/ppo.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", f"{wandb.run.dir}/scripts/rollout_storage.py")
         
         
         # 将参数保存到 runs

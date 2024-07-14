@@ -135,7 +135,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                                             dim=1)
 
         # locol privileged obs
-        lpy = self._get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
+        lpy = self.get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
         forward = quat_apply(self.base_quat, self.forward_vec)
         yaw = torch.atan2(forward[:, 1], forward[:, 0])
         quat_base = quat_from_euler_xyz(torch.zeros_like(yaw), torch.zeros_like(yaw), yaw)
@@ -328,19 +328,56 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         
         return torch.stack([roll, pitch, yaw], dim=-1)
 
+class EvaluationWrapper(VelocityTrackingEasyEnv):
+    def __init__(self, sim_device, headless, num_envs=None, prone=False, deploy=False,
+                 cfg: Cfg = None, eval_cfg: Cfg = None, initial_dynamics_dict=None, physics_engine="SIM_PHYSX"):
+
+        super().__init__(sim_device, headless, num_envs=num_envs, prone=prone, deploy=deploy,
+                 cfg=cfg, eval_cfg=eval_cfg, initial_dynamics_dict=initial_dynamics_dict, physics_engine=physics_engine)
+
+    def update_arm_commands(self, target_lpy, target_rpy):
+        self.commands_arm_obs[:, :3] = target_lpy
+        
+        roll = target_rpy[:, 0]
+        pitch = target_rpy[:, 1]
+        yaw = target_rpy[:, 2]
+        
+        zero_vec = torch.zeros_like(roll)
+        q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
+        q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
+        q3 = quat_from_euler_xyz(roll, zero_vec, zero_vec)
+        quats = quat_mul(q1, quat_mul(q2, q3))
+
+        self.obj_quats[:] = quats.reshape(-1, 4)
+        assert torch.allclose(torch.norm(self.obj_quats[:], dim=1), torch.ones(self.num_envs).to(self.device), atol=1e-5), "quats is not unit vector."
+
+        if self.cfg.hybrid.use_vision:
+            self._get_object_pose_in_ee()
+            self._get_object_abg_in_ee()
+
+        self.visual_rpy[:] = quaternion_to_rpy(self.obj_quats[:]).to(self.device)
+        rpy = self.quat_to_angle(self.obj_quats[:]).to(self.device)  # 和坐标轴的夹角
+        
+        self.commands_arm_obs[:, 3] = rpy[:, 0]
+        self.commands_arm_obs[:, 4] = rpy[:, 1]
+        self.commands_arm_obs[:, 5] = rpy[:, 2]
 
 class KeyboardWrapper(VelocityTrackingEasyEnv):
     def __init__(self, sim_device, headless, cfg):
         super().__init__(sim_device, headless, cfg=cfg)
         
         self.gym.subscribe_viewer_keyboard_event(
-            self.viewer, gymapi.KEY_UP, "move foward")
+            self.viewer, gymapi.KEY_NUMPAD_8, "move forward")
         self.gym.subscribe_viewer_keyboard_event(
-            self.viewer, gymapi.KEY_DOWN, "back foward")
+            self.viewer, gymapi.KEY_NUMPAD_5, "move backward")
         self.gym.subscribe_viewer_keyboard_event(
-            self.viewer, gymapi.KEY_LEFT, "turn left")
+            self.viewer, gymapi.KEY_NUMPAD_4, "move left")
         self.gym.subscribe_viewer_keyboard_event(
-            self.viewer, gymapi.KEY_RIGHT, "turn right")
+            self.viewer, gymapi.KEY_NUMPAD_6, "move right")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_NUMPAD_7, "turn left")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_NUMPAD_9, "turn right")
         self.gym.subscribe_viewer_keyboard_event(
             self.viewer, gymapi.KEY_U, "arm up")
         self.gym.subscribe_viewer_keyboard_event(
@@ -388,10 +425,14 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
                     # Save the image as now.png
                     plt.imsave('now.png', video_frame)
 
-                elif evt.action == 'move foward' and evt.value > 0:
+                elif evt.action == 'move forward' and evt.value > 0:
                     self.commands_dog[0, 0] += 0.1
-                elif evt.action == 'back foward' and evt.value > 0:
+                elif evt.action == 'move backward' and evt.value > 0:
                     self.commands_dog[0, 0] -= 0.1
+                elif evt.action == 'move left' and evt.value > 0:
+                    self.commands_dog[0, 1] += 0.1
+                elif evt.action == 'move right' and evt.value > 0:
+                    self.commands_dog[0, 1] -= 0.1
                 elif evt.action == 'turn left' and evt.value > 0:
                     self.commands_dog[0, 2] += 0.1
                 elif evt.action == 'turn right' and evt.value > 0:
@@ -411,7 +452,7 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
                 elif evt.action == 'arm right' and evt.value > 0:
                     self.commands_arm[0, 2] -= 0.1
                 
-                elif evt.action in ['move foward', 'back foward', 'turn left',
+                elif evt.action in ['move forward', 'move backward', 'turn left',
                                     'turn right', 'arm up', 'arm down',
                                     'arm forward', 'arm backward', 'arm left',
                                     'arm right'] and evt.value == 0:
@@ -474,9 +515,9 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
         self.visual_rpy[0:1] = quaternion_to_rpy(self.obj_quats[0:1]).to(self.device)
         # self.visual_quats[0:1] = quats.to(self.device)
         rpy = self.quat_to_angle(self.obj_quats[0:1]).to(self.device)  # 和坐标轴的夹角
-        self.commands_arm[0:1, 3] = rpy[:, 0]
-        self.commands_arm[0:1, 4] = rpy[:, 1]
-        self.commands_arm[0:1, 5] = rpy[:, 2]
+        # self.commands_arm[0:1, 3] = rpy[:, 0]
+        # self.commands_arm[0:1, 4] = rpy[:, 1]
+        # self.commands_arm[0:1, 5] = rpy[:, 2]
         
         # use delta angle
         self.commands_arm_obs[0:1, 3] = rpy[:, 0]
