@@ -35,6 +35,26 @@ def unified_reward_scales_wrapper(self):
     return get_reward_scales
 
 def train_go1(headless=True):
+    
+    if args.debug:
+        mode = "disabled"
+        args.num_envs = 12
+    else:
+        mode = "online"
+    
+        if args.offline:
+            mode = "offline"
+
+    if args.no_wandb:
+        mode = "disabled"
+
+    if args.resume:
+        args.tags.append("resume")
+
+    args.seed = set_seed(args.seed)
+    args.tags.append(f"seed{args.seed}")
+    # to see the environment rendering, set headless=False
+    
     config_go1(Cfg)
     config_wtw(Cfg)
     config_asset(Cfg)
@@ -43,6 +63,10 @@ def train_go1(headless=True):
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
     Cfg.control.control_type = "P"
+    if Cfg.control.control_type == "P":
+        Cfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
+        Cfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
+
     Cfg.domain_rand.added_mass_range = [-2.0, 2.0]
     Cfg.env.observe_two_prev_actions = False
     Cfg.commands.body_roll_range = [-0.4, 0.4]
@@ -57,7 +81,7 @@ def train_go1(headless=True):
     Cfg.terrain.mesh_type = "plane"
     if Cfg.terrain.mesh_type == "plane":
         Cfg.terrain.teleport_robots = False
-    Cfg.control.update_obs_freq = 50 # Hz
+    Cfg.control.update_obs_freq = 20 # Hz
     Cfg.env.num_actions = 18
     Cfg.env.num_observations = 63
     Cfg.env.num_obs_history = Cfg.env.num_observation_history * Cfg.env.num_observations
@@ -78,12 +102,18 @@ def train_go1(headless=True):
         global_switch.pretrained_to_hybrid_start = 0
 
 
-    if args.debug or args.offline:
+    if args.debug:
         if global_switch.pretrained_to_hybrid_start > 0:
-            global_switch.pretrained_to_hybrid_start = 2  # 2000 with pretrained, 10000 from scratch
+            global_switch.pretrained_to_hybrid_start = 2
         global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 2
         UnifiedRunnerArgs.save_interval = 2
         UnifiedRunnerArgs.save_video_interval = 10
+
+    Cfg.commands.T_force_range = [2, 4.]
+    Cfg.domain_rand.randomize_end_effector_force = False
+    Cfg.commands.add_force_thres = 0.3
+    Cfg.domain_rand.max_force = 15
+    Cfg.domain_rand.max_force_offset = 0.01
 
     Cfg.env.priv_observe_vel = False
     Cfg.commands.global_reference = False
@@ -135,6 +165,7 @@ def train_go1(headless=True):
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{args.log_dir}/scripts/legged_robot.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{args.log_dir}/scripts/legged_robot_config.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{args.log_dir}/scripts/env__init__.py")
+        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/go1/asset_config.py", f"{args.log_dir}/scripts/asset_config.py")
         
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/__init__.py", f"{args.log_dir}/scripts/ppo_cse_unified__init__.py")
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/unified2head_ac.py", f"{args.log_dir}/scripts/unified2head_ac.py")
@@ -142,17 +173,18 @@ def train_go1(headless=True):
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/rollout_storage.py", f"{args.log_dir}/scripts/rollout_storage.py")
         
         
+        wandb.run.log_code(f"{args.log_dir}/scripts")
         # # 将版本的 commit 代码 保存到 wandb
-        os.makedirs(f"{wandb.run.dir}/scripts", exist_ok=True)
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/unified_train.py", f"{wandb.run.dir}/scripts/unified_train.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{wandb.run.dir}/scripts/legged_robot.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{wandb.run.dir}/scripts/legged_robot_config.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{wandb.run.dir}/scripts/env__init__.py")
+        # os.makedirs(f"{wandb.run.dir}/scripts", exist_ok=True)
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/unified_train.py", f"{wandb.run.dir}/scripts/unified_train.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot.py", f"{wandb.run.dir}/scripts/legged_robot.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/legged_robot_config.py", f"{wandb.run.dir}/scripts/legged_robot_config.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym/envs/automatic/__init__.py", f"{wandb.run.dir}/scripts/env__init__.py")
         
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/__init__.py", f"{wandb.run.dir}/scripts/ppo_cse_unified__init__.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/unified2head_ac.py", f"{wandb.run.dir}/scripts/unified2head_ac.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/ppo.py", f"{wandb.run.dir}/scripts/ppo.py")
-        shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/rollout_storage.py", f"{wandb.run.dir}/scripts/rollout_storage.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/__init__.py", f"{wandb.run.dir}/scripts/ppo_cse_unified__init__.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/unified2head_ac.py", f"{wandb.run.dir}/scripts/unified2head_ac.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/ppo.py", f"{wandb.run.dir}/scripts/ppo.py")
+        # shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_unified/rollout_storage.py", f"{wandb.run.dir}/scripts/rollout_storage.py")
         
         
         # 将参数保存到 runs
@@ -179,7 +211,11 @@ def train_go1(headless=True):
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/dog_ac.py", policy="now")
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/ppo_ac.py", policy="now")
         # wandb.save(f"{MINI_GYM_ROOT_DIR}/go1_gym_learn/ppo_cse_automatic/rollout_storage.py", policy="now")
-        
+        wandb.log({
+            "Global_Switch/start": global_switch.pretrained_to_hybrid_start,
+            "Global_Switch/end": global_switch.pretrained_to_hybrid_end,
+            }, step=0)
+
 
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)
@@ -209,22 +245,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.debug:
-        mode = "disabled"
-        args.num_envs = 4
-    else:
-        mode = "online"
-    
-        if args.offline:
-            mode = "offline"
-
-    if args.no_wandb:
-        mode = "disabled"
-
-    if args.resume:
-        args.tags.append("resume")
-
-    args.seed = set_seed(args.seed)
-    args.tags.append(f"seed{args.seed}")
-    # to see the environment rendering, set headless=False
     train_go1(args)

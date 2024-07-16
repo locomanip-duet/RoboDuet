@@ -84,6 +84,7 @@ class TrackingTester:
         self.net_type = net_type
         self.env: EvaluationWrapper
         self.env, Cfg = self.load_env()
+        self.forces = torch.zeros_like(self.env.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
         
         if net_type == "T":
             dog_ckpt_path = self.ckpt_folder + '/checkpoints_dog/ac_weights_' + self.ckpt_number + ".pt"
@@ -266,13 +267,13 @@ class TrackingTester:
         z = l * torch.sin(p)
         return torch.stack((x, y, z), dim=1)
 
-    def add_random_force(self):
-        forces = torch.zeros_like(self.env.rigid_body_state[:, :3]).reshape(self.num_envs, -1, 3)
-        forces[:, 0] = torch_rand_float(self.force_range[0], self.force_range[1], (self.num_envs, 3), device=self.device)
-        force_positions = self.env.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
-        offset = torch_rand_float(-self.max_force_offset, self.max_force_offset, (self.num_envs, 3), device=self.device)
-        force_positions[:, 0] += offset
-        self.env.gym.apply_rigid_body_force_at_pos_tensors(self.env.sim, gymtorch.unwrap_tensor(forces.reshape(-1, 3)), gymtorch.unwrap_tensor(force_positions.reshape(-1, 3)), gymapi.ENV_SPACE)
+    def add_random_force(self, run_time):
+        if run_time % 100 == 0:  # 100 * 0.02 = 2s
+            self.forces[:, 0] = torch_rand_float(self.force_range[0], self.force_range[1], (self.num_envs, 3), device=self.device)
+            self.force_positions = self.env.rigid_body_state[..., :3].clone().reshape(self.num_envs, -1, 3)
+            offset = torch_rand_float(-self.max_force_offset, self.max_force_offset, (self.num_envs, 3), device=self.device)
+            self.force_positions[:, 0] += offset
+        self.env.gym.apply_rigid_body_force_at_pos_tensors(self.env.sim, gymtorch.unwrap_tensor(self.forces.reshape(-1, 3)), gymtorch.unwrap_tensor(self.force_positions.reshape(-1, 3)), gymapi.ENV_SPACE)
 
 
     def compute_ee_pose_error(self, target_quat):
@@ -390,7 +391,7 @@ class TrackingTester:
 
 
                 if self.mode == "survival":
-                    self.add_random_force()
+                    self.add_random_force(run_time)
                     base_height = self.env.base_pos[:, 2]
                     dead_flag[base_height < 0.26] = 1
                     

@@ -417,7 +417,7 @@ class TrackingTester:
                         tracking_error_stack.append(error[valid_mask])
 
 
-                    valid_points = (distance_error < self.lpy_threshold) & (angle_error < self.rpy_threshold)
+                    valid_points = (distance_error < self.lpy_threshold) & (geodesic_distance < self.rpy_threshold)
                     print("lpy success: ", (distance_error < self.lpy_threshold).sum() / distance_error.shape[0])
                     print("rpy success: ", (geodesic_distance < self.rpy_threshold).sum() / geodesic_distance.shape[0])
                     valid_points = valid_points.squeeze()
@@ -507,7 +507,7 @@ if __name__ == "__main__":
     # ckpt_folder = "/home/nimolty/hybrid_improve_dwb/runs/"+args.algo+"/"+args.seed
     ckpt_folder = "/home/pgp/agile/hybrid_improve_dwb/runs/ckpts/"+args.algo+"/"+args.seed
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/download/go1_torque_0704"
-    ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/232428.254725_seed7153"
+    ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765"
     args.ckpt_number = "054000"
     runner = TrackingTester(
         vel = args.vel,

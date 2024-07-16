@@ -51,7 +51,7 @@ class RunnerArgs(PrefixProto, cli=False):
 
     # logging
     save_interval = 400  # check for potential saves every this many iterations
-    save_video_interval = 100
+    save_video_interval = 400
     log_freq = 10
 
     # load and resume
@@ -361,7 +361,11 @@ class Runner:
         torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"),
             osp.join(self.log_dir, f"checkpoints_dog/ac_weights_last_dog.pt"))
-            
+        
+        if it in [44800, 44400, 44000]:
+            torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
+            wandb.save(osp.join(self.log_dir, f"checkpoints_dog/ac_weights_{it:06d}.pt"))
+        
         path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_dog_path = f'{path}/adaptation_module_latest_dog.jit'
         adaptation_module_dog = copy.deepcopy(self.alg_dog.actor_critic.adaptation_module).to('cpu')
@@ -381,6 +385,10 @@ class Runner:
         torch.save(self.alg_arm.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
         shutil.copyfile(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"), 
                         osp.join(self.log_dir, f"checkpoints_arm/ac_weights_last_arm.pt"))
+        
+        if it in [44800, 44400, 44000]:
+            torch.save(self.alg_dog.actor_critic.state_dict(), osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
+            wandb.save(osp.join(self.log_dir, f"checkpoints_arm/ac_weights_{it:06d}.pt"))
         
         path = osp.join(self.log_dir, f"deploy_model")
         adaptation_module_path = f'{path}/adaptation_module_latest_arm.jit'
