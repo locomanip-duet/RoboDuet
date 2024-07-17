@@ -130,9 +130,9 @@ def train_go1(headless=True):
     
     now = datetime.now()
     stem = Path(__file__).stem
-    wandb.init(project="controller",
+    wandb.init(entity="RoboDuet",
+               project="ablation",
                group=args.run_name,
-               entity="dwb",
                mode=mode,
                notes=args.notes,
                name=f'{now.strftime("%Y-%m-%d")}/{stem}/{now.strftime("%H%M%S.%f")}',
@@ -159,6 +159,7 @@ def train_go1(headless=True):
         os.makedirs(osp.join(args.log_dir, "deploy_model"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "scripts"), exist_ok=True)
         os.makedirs(osp.join(args.log_dir, "videos"), exist_ok=True)
+        os.makedirs(f"{MINI_GYM_ROOT_DIR}/tmp/deploy_model", exist_ok=True)
 
         # 将版本的 commit 代码 保存到 runs
         shutil.copyfile(f"{MINI_GYM_ROOT_DIR}/scripts/unified_train.py", f"{args.log_dir}/scripts/unified_train.py")

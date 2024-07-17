@@ -301,7 +301,7 @@ class Runner:
             if UnifiedRunnerArgs.save_video_interval:
                 self.log_video(it)
 
-            if it % UnifiedRunnerArgs.save_interval == 0:
+            if not self.debug and it % UnifiedRunnerArgs.save_interval == 0:
                 self.save(it)
                 
             ep_infos.clear()

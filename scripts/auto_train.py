@@ -131,7 +131,7 @@ def train_go1(arg):
     now = datetime.now()
     stem = Path(__file__).stem
     wandb.init(entity="RoboDuet",
-               project="go2_arx",
+               project="ablation",
                group=args.run_name,
                mode=mode,
                notes=args.notes,

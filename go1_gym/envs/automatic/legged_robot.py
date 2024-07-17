@@ -442,9 +442,7 @@ class LeggedRobot(BaseTask):
         self.gait_indices[env_ids] = 0
 
     def compute_observations(self):
-        env_ids = (self.episode_length_buf % int((1.0 / self.cfg.control.update_obs_freq) / self.dt + 0.5) == 0).nonzero(as_tuple=False).flatten()
-        self.obj_obs_pose_in_ee[env_ids] = self.obj_pose_in_ee[env_ids].clone()
-        self.obj_obs_abg_in_ee[env_ids] = self.obj_abg_in_ee[env_ids].clone()
+
         
         rpy = quaternion_to_rpy(self.base_quat)
         roll, pitch, yaw = rpy[:, 0], rpy[:, 1], rpy[:, 2]
@@ -454,14 +452,26 @@ class LeggedRobot(BaseTask):
                             self.actions[:, :self.num_actions]
                             ), dim=-1)
 
-        obs_buf = torch.cat(
-            (obs_buf,
-                (self.commands_dog * self.commands_scale_dog)[:, :3],
-                (self.obj_obs_pose_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
-                (self.obj_obs_abg_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
-                roll.unsqueeze(1),
-                pitch.unsqueeze(1),
-            ), dim=-1)
+        if self.cfg.hybrid.use_vision:
+            env_ids = (self.episode_length_buf % int((1.0 / self.cfg.control.update_obs_freq) / self.dt + 0.5) == 0).nonzero(as_tuple=False).flatten()
+            self.obj_obs_pose_in_ee[env_ids] = self.obj_pose_in_ee[env_ids].clone()
+            self.obj_obs_abg_in_ee[env_ids] = self.obj_abg_in_ee[env_ids].clone()
+            obs_buf = torch.cat(
+                (obs_buf,
+                    (self.commands_dog * self.commands_scale_dog)[:, :3],
+                    (self.obj_obs_pose_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_pose_in_ee[:]),
+                    (self.obj_obs_abg_in_ee[:]) if global_switch.switch_open else torch.zeros_like(self.obj_obs_abg_in_ee[:]),
+                    roll.unsqueeze(1),
+                    pitch.unsqueeze(1),
+                ), dim=-1)
+        else:
+            obs_buf = torch.cat(
+                (obs_buf,
+                    (self.commands_dog * self.commands_scale_dog)[:, :3],
+                    (self.commands_arm_obs[:]) if global_switch.switch_open else torch.zeros_like(self.commands_arm_obs[:]),
+                    roll.unsqueeze(1),
+                    pitch.unsqueeze(1),
+                ), dim=-1)
 
         if self.cfg.env.observe_two_prev_actions:
             obs_buf = torch.cat((obs_buf, self.last_actions), dim=-1)

@@ -44,7 +44,6 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         return obs
 
     def get_arm_observations(self):
-        env_ids = (self.episode_length_buf % int((1.0 / self.cfg.control.update_obs_freq) / self.dt + 0.5) == 0).nonzero(as_tuple=False).flatten()
         
 
         
@@ -58,6 +57,7 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                             ), dim=-1)
 
         if self.cfg.hybrid.use_vision:
+            env_ids = (self.episode_length_buf % int((1.0 / self.cfg.control.update_obs_freq) / self.dt + 0.5) == 0).nonzero(as_tuple=False).flatten()
             self.obj_obs_pose_in_ee[env_ids] = self.obj_pose_in_ee[env_ids].clone()
             self.obj_obs_abg_in_ee[env_ids] = self.obj_abg_in_ee[env_ids].clone()
             obs_buf = torch.cat(
