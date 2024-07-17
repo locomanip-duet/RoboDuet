@@ -95,11 +95,12 @@ def train_go1(arg):
     DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265/checkpoints_dog/ac_weights_009600.pt'
     ArmRunnerArgs.resume = False
     global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0  # without mixed phase
     
-
     if args.wo_two_stage:
         global_switch.pretrained_to_hybrid_start = 0
+
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0  # without mixed phase
+    
 
 
     if args.debug:

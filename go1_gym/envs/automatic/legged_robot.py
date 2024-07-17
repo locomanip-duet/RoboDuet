@@ -318,7 +318,7 @@ class LeggedRobot(BaseTask):
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids)
-        # self.compute_observations()
+        self.compute_observations()
         
         # 放在 reward 之后 observation 之前，因为要用 self.obj_abg
         if self.cfg.hybrid.use_vision:

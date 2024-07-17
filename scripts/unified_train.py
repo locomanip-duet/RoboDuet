@@ -95,11 +95,11 @@ def train_go1(headless=True):
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
     global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
-    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 5000
-    global_switch.init_sigmoid_lr()
 
     if args.wo_two_stage:
         global_switch.pretrained_to_hybrid_start = 0
+
+    global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0
 
 
     if args.debug:
@@ -127,6 +127,7 @@ def train_go1(headless=True):
     # global_switch.get_reward_scales = unified_reward_scales_wrapper(global_switch)
     
     Cfg.asset.render_sphere = True # NOTE no use in headless 
+    global_switch.init_sigmoid_lr()
     
     now = datetime.now()
     stem = Path(__file__).stem
