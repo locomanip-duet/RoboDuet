@@ -24,7 +24,7 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/232428.254725_seed7153"  # ori-10, unlearnstd
+logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765"  # ori-10, unlearnstd
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':

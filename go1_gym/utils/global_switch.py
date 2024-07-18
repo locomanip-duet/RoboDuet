@@ -60,7 +60,7 @@ class GlobalSwitch():
     #         return self.hybrid_reward_scales
     
     def get_beta(self):
-        if self.count < self.pretrained_to_hybrid_start:
+        if self.count <= self.pretrained_to_hybrid_start:
             return 0.0
         
         elif self.count < self.pretrained_to_hybrid_end:

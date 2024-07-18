@@ -19,5 +19,5 @@ mkdir screen_log
 
 # Baseline
 screen -dmS Baseline_Seed2 bash -c "source ~/miniconda3/etc/profile.d/conda.sh && conda activate isaacgym && python scripts/unified_train.py --wo_two_stage --num_envs 4096 --seed 2 --run_name Baseline --sim_device cuda:0 > screen_log/Baseline_Seed2.log"
-#screen -dmS Baseline_Seed8765 bash -c "source ~/miniconda3/etc/profile.d/conda.sh && conda activate isaacgym && python scripts/unified_train.py --wo_two_stage --num_envs 4096 --seed 8765 --run_name Baseline --sim_device cuda:4 > screen_log/Baseline_Seed8765.log"
+#screen -dmS Baseline_Seed8765 bash -c "source ~/miniconda3/etc/profile.d/conda.sh && conda activate isaacgym && python scripts/unified_train.py --wo_two_stage --num_envs 4096 --seed 8765 --run_name Baseline --sim_device cuda:0 > screen_log/Baseline_Seed8765.log"
 #screen -dmS Baseline_Seed3779 bash -c "source ~/miniconda3/etc/profile.d/conda.sh && conda activate isaacgym && python scripts/unified_train.py --wo_two_stage --num_envs 4096 --seed 3779 --run_name Baseline --sim_device cuda:5 > screen_log/Baseline_Seed3779.log"
