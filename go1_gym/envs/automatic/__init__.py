@@ -45,8 +45,6 @@ class VelocityTrackingEasyEnv(LeggedRobot):
 
     def get_arm_observations(self):
         
-
-        
         rpy = quaternion_to_rpy(self.base_quat)
         roll, pitch, yaw = rpy[:, 0], rpy[:, 1], rpy[:, 2]
         
@@ -390,6 +388,8 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
             self.viewer, gymapi.KEY_J, "arm left")
         self.gym.subscribe_viewer_keyboard_event(
             self.viewer, gymapi.KEY_L, "arm right")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_R, "reset")
         
     def render_gui(self, sync_frame_time=True):
         if self.viewer:
@@ -451,12 +451,17 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
                     self.commands_arm[0, 2] += 0.1
                 elif evt.action == 'arm right' and evt.value > 0:
                     self.commands_arm[0, 2] -= 0.1
+                elif evt.action == 'reset' and evt.value > 0:
+                    self.reset()
+                    self.commands_dog[0, :3] = 0
                 
                 elif evt.action in ['move forward', 'move backward', 'turn left',
+                                    'move left', 'move right',
                                     'turn right', 'arm up', 'arm down',
                                     'arm forward', 'arm backward', 'arm left',
                                     'arm right'] and evt.value == 0:
                     print(f"x_vel: {self.commands_dog[0, 0]:.2f}, \
+                          y_vel: {self.commands_dog[0, 1]:.2f}, \
                           z_vel: {self.commands_dog[0, 2]:.2f}, \
                           l: {self.commands_arm[0, 0]:.2f}, \
                           p: {self.commands_arm[0, 1]:.2f}, \

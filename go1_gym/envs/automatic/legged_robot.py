@@ -233,6 +233,8 @@ class LeggedRobot(BaseTask):
             
             torques = torques * self.motor_strengths
             torques = torch.clip(torques, -self.torque_limits, self.torque_limits)
+            # print("torque: ", torques[..., 12:])
+            # print("dof_vel: ", self.dof_vel[..., 12:])
             return torques
         else:
             raise NameError(f"Unknown controller type: {control_type}")

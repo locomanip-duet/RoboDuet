@@ -19,7 +19,7 @@ from isaacgym import gymapi
 from pynput import keyboard
 import threading
 
-ckpt_id = '044000'
+ckpt_id = '00'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
@@ -33,10 +33,8 @@ if control_type == 'random':
 
 x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 0., 0.0, 0
 l_cmd, p_cmd, y_cmd = 0.55, -0.6, 0.9
-l_cmd, p_cmd, y_cmd = 0.5, 0.5, 0
 roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, np.pi/2
-roll_cmd, pitch_cmd, yaw_cmd = 0.1, 0.5, 0
-
+roll_cmd, pitch_cmd, yaw_cmd = -np.pi/4, np.pi/4, -np.pi/4
 
 
 def play_go1(headless=True):
@@ -191,28 +189,27 @@ def load_env(logdir, headless=False):
 
     return env, dog_policy, arm_policy
 
-
-def load_dog_policy(logdir, Cfg):
-    actor_critic = DogActorCritic(Cfg.dog.dog_num_observations,
-                                Cfg.dog.dog_num_privileged_obs,
-                                Cfg.dog.dog_num_obs_history,
-                                Cfg.dog.dog_actions,
-                                ).to("cpu")
-    global ckpt_id
+import os.path as osp
+ckpt_path = '/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765/deploy_model'
+def load_dog_policy(logdir, cfg):
     device = torch.device("cpu")
-    if ckpt_id == 'last':
-        ckpt_id += '_dog'
-    ckpt = torch.load(logdir + f'/checkpoints_dog/ac_weights_{str(ckpt_id)}.pt', map_location=device)
-    # for key, value in ckpt.items():
-    #     print(key, value.shape)
-    actor_critic.load_state_dict(ckpt)
-    
-    actor_critic.eval()
-    adaptation_module = actor_critic.adaptation_module
-    body = actor_critic.actor_body
+    body = torch.jit.load(osp.join(ckpt_path, 'body_latest_dog.jit'), map_location=device)
+    adaptation_module = torch.jit.load(osp.join(ckpt_path, 'adaptation_module_latest_dog.jit'), map_location=device)
     
     def policy(obs, info={}):
-        i = 0
+        latent = adaptation_module.forward(obs["obs_history"].to('cpu'))
+        action = body.forward(torch.cat((obs["obs_history"].to('cpu'), latent), dim=-1))
+        info['latent'] = latent
+        return action
+
+    return policy
+
+def load_arm_policy(logdir, cfg):   
+    device = torch.device("cpu")
+    body = torch.jit.load(osp.join(ckpt_path, 'body_latest_arm.jit'), map_location=device)
+    adaptation_module = torch.jit.load(osp.join(ckpt_path, "adaptation_module_latest_arm.jit"), map_location=device)
+    
+    def policy(obs, info={}):
         latent = adaptation_module.forward(obs["obs_history"].to('cpu'))
         action = body.forward(torch.cat((obs["obs_history"].to('cpu'), latent), dim=-1))
         info['latent'] = latent
@@ -220,34 +217,6 @@ def load_dog_policy(logdir, Cfg):
     
     return policy
 
-def load_arm_policy(logdir, Cfg):
-    actor_critic = ArmActorCritic(
-        Cfg.arm.arm_num_observations,
-        Cfg.arm.arm_num_privileged_obs,
-        Cfg.arm.arm_num_obs_history,
-        Cfg.arm.num_actions_arm_cd,
-        device='cpu'
-    ).to('cpu')
-    global ckpt_id
-    
-    device = torch.device("cpu")
-    if ckpt_id == 'last':
-        ckpt_id += '_arm'
-    ckpt = torch.load(logdir + f'/checkpoints_arm/ac_weights_{str(ckpt_id)}.pt', map_location=device)
-    actor_critic.load_state_dict(ckpt)
-    
-    actor_critic.eval()
-    adaptation_module = actor_critic.adaptation_module
-    body = actor_critic.actor_body
-    
-    def policy(obs, info={}):
-        i = 0
-        latent = adaptation_module.forward(obs["obs_history"].to('cpu'))
-        action = body.forward(torch.cat((obs["obs_history"].to('cpu'), latent), dim=-1))
-        info['latent'] = latent
-        return action
-
-    return policy
 
 
 if __name__ == '__main__':
