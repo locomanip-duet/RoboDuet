@@ -30,6 +30,7 @@ class ArmActorCritic(nn.Module):
         self.decoder = ArmAC_Args.use_decoder
         super().__init__()
 
+        self.num_obs = num_obs
         self.num_obs_history = num_obs_history
         self.num_privileged_obs = num_privileged_obs
 
@@ -48,13 +49,13 @@ class ArmActorCritic(nn.Module):
                     nn.Linear(ArmAC_Args.adaptation_module_branch_hidden_dims[l],
                               ArmAC_Args.adaptation_module_branch_hidden_dims[l + 1]))
                 adaptation_module_layers.append(activation)
-        self.adaptation_module = nn.Sequential(*adaptation_module_layers)
 
+        self.adaptation_module = nn.Sequential(*adaptation_module_layers)
 
 
         # Policy
         actor_layers = []
-        actor_layers.append(nn.Linear(self.num_privileged_obs + self.num_obs_history, ArmAC_Args.actor_hidden_dims[0]))
+        actor_layers.append(nn.Linear(self.num_obs + self.num_privileged_obs, ArmAC_Args.actor_hidden_dims[0]))
         actor_layers.append(activation)
         for l in range(len(ArmAC_Args.actor_hidden_dims)):
             if l == len(ArmAC_Args.actor_hidden_dims) - 1:
@@ -64,9 +65,17 @@ class ArmActorCritic(nn.Module):
                 actor_layers.append(activation)
         self.actor_body = nn.Sequential(*actor_layers)
 
+        self.history_encoder = nn.Sequential(
+            nn.Linear(self.num_obs_history - self.num_obs, ArmAC_Args.critic_hidden_dims[0]),
+            activation,
+            nn.Linear(ArmAC_Args.critic_hidden_dims[0], ArmAC_Args.critic_hidden_dims[1]),
+            activation,
+            nn.Linear(ArmAC_Args.critic_hidden_dims[1], ArmAC_Args.critic_hidden_dims[2]),
+        )
+
         # Value function
         critic_layers = []
-        critic_layers.append(nn.Linear(self.num_privileged_obs + self.num_obs_history, ArmAC_Args.critic_hidden_dims[0]))
+        critic_layers.append(nn.Linear(self.num_obs + self.num_privileged_obs + ArmAC_Args.critic_hidden_dims[2], ArmAC_Args.critic_hidden_dims[0]))
         critic_layers.append(activation)
         for l in range(len(ArmAC_Args.critic_hidden_dims)):
             if l == len(ArmAC_Args.critic_hidden_dims) - 1:
@@ -81,7 +90,7 @@ class ArmActorCritic(nn.Module):
         print(f"Arm Critic MLP: {self.critic_body}")
 
         # Action noise
-        # self.std = nn.Parameter(ARMAC_Args.init_noise_std * torch.ones(num_actions))
+        # self.std = nn.Parameter(ArmAC_Args.init_noise_std * torch.ones(num_actions))
         self.std = torch.ones(num_actions, device=kwargs['device']) * ArmAC_Args.init_noise_std
         self.std[-2:] = 0.1  # deterministic for the last two actions
         self.distribution = None
@@ -114,8 +123,9 @@ class ArmActorCritic(nn.Module):
         return self.distribution.entropy().sum(dim=-1)
 
     def update_distribution(self, observation_history):
+        obs = observation_history[..., -self.num_obs:]
         latent = self.adaptation_module(observation_history)
-        mean = self.actor_body(torch.cat((observation_history, latent), dim=-1))
+        mean = self.actor_body(torch.cat((obs, latent), dim=-1))
         mean[..., -2:] = torch.tanh(mean[..., -2:])
         self.distribution = Normal(mean, mean * 0. + self.std)
         # print("std: ", self.std)
@@ -134,8 +144,9 @@ class ArmActorCritic(nn.Module):
         return self.act_student(ob["obs_history"], policy_info=policy_info)
 
     def act_student(self, observation_history, policy_info={}):
+        obs = observation_history[..., -self.num_obs:]
         latent = self.adaptation_module(observation_history)
-        actions_mean = self.actor_body(torch.cat((observation_history, latent), dim=-1))
+        actions_mean = self.actor_body(torch.cat((obs, latent), dim=-1))
         policy_info["latents"] = latent.detach().cpu().numpy()
         return actions_mean
 
@@ -145,7 +156,10 @@ class ArmActorCritic(nn.Module):
         return actions_mean
 
     def evaluate(self, observation_history, privileged_observations, **kwargs):
-        value = self.critic_body(torch.cat((observation_history, privileged_observations), dim=-1))
+        obs = observation_history[..., -self.num_obs:]
+        obs_h = observation_history[..., :-self.num_obs]
+        h_latent = self.history_encoder(obs_h)
+        value = self.critic_body(torch.cat((obs, privileged_observations, h_latent), dim=-1))
         return value
 
     def get_student_latent(self, observation_history):

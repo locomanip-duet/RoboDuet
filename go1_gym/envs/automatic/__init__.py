@@ -30,6 +30,8 @@ class VelocityTrackingEasyEnv(LeggedRobot):
         rescaled_obs = obs * 0.4
         self.commands_dog[:, 3] = torch.clip(rescaled_obs[..., 0], self.cfg.commands.limit_body_pitch[0], self.cfg.commands.limit_body_pitch[1])  # n, 2
         self.commands_dog[:, 4] = torch.clip(rescaled_obs[..., 1], self.cfg.commands.limit_body_roll[0], self.cfg.commands.limit_body_roll[1])  # n, 2
+        # self.commands_dog[:, 3] = rescaled_obs[..., 0]
+        # self.commands_dog[:, 4] = rescaled_obs[..., 1]
         
         
         if self.cfg.hybrid.plan_vel:

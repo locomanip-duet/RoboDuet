@@ -240,7 +240,7 @@ class Runner:
 
 
             if global_switch.switch_open:
-                mean_value_loss_arm, mean_surrogate_loss_arm, mean_adaptation_module_loss_arm, mean_decoder_loss, mean_decoder_loss_student, mean_adaptation_module_test_loss, mean_decoder_test_loss, mean_decoder_test_loss_student = self.alg_arm.update()
+                mean_value_loss_arm, mean_surrogate_loss_arm, mean_adaptation_module_loss_arm, mean_decoder_loss, mean_decoder_loss_student, mean_adaptation_module_test_loss, mean_decoder_test_loss, mean_decoder_test_loss_student = self.alg_arm.update(un_adapt=True)
             mean_value_loss_dog, mean_surrogate_loss_dog, mean_adaptation_module_loss_dog, mean_decoder_loss_dog, mean_decoder_loss_student_dog, mean_adaptation_module_test_loss_dog, mean_decoder_test_loss_dog, mean_decoder_test_loss_student_dog = self.alg_dog.update()
             stop = time.time()
             learn_time = stop - start

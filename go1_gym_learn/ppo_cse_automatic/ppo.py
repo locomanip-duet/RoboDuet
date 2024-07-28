@@ -19,8 +19,8 @@ class PPO_Args(PrefixProto):
     entropy_coef = 0.01
     num_learning_epochs = 5
     num_mini_batches = 4  # mini batch size = num_envs*nsteps / nminibatches
-    learning_rate = 1.e-3  # 5.e-4
-    adaptation_module_learning_rate = 1.e-3
+    learning_rate = 5.e-4  # 5.e-4
+    adaptation_module_learning_rate = 5.e-4
     num_adaptation_module_substeps = 1
     schedule = 'adaptive'  # could be adaptive, fixed
     gamma = 0.99
@@ -96,7 +96,7 @@ class PPO:
         last_values = self.actor_critic.evaluate(last_critic_obs, last_critic_privileged_obs).detach()
         self.storage.compute_returns(last_values, PPO_Args.gamma, PPO_Args.lam)
 
-    def update(self):
+    def update(self, un_adapt=False):
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_adaptation_module_loss = 0
@@ -166,32 +166,33 @@ class PPO:
             num_train = int(data_size // 5 * 4)
 
             # Adaptation module gradient step
+            
+            if not un_adapt:
+                for epoch in range(PPO_Args.num_adaptation_module_substeps):
 
-            for epoch in range(PPO_Args.num_adaptation_module_substeps):
+                    adaptation_pred = self.actor_critic.adaptation_module(obs_history_batch)
+                    with torch.no_grad():
+                        adaptation_target = privileged_obs_batch
+                        # residual = (adaptation_target - adaptation_pred).norm(dim=1)
+                        # caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
+                        #                       sysid_residual=residual.cpu().numpy())
 
-                adaptation_pred = self.actor_critic.adaptation_module(obs_history_batch)
-                with torch.no_grad():
-                    adaptation_target = privileged_obs_batch
-                    # residual = (adaptation_target - adaptation_pred).norm(dim=1)
-                    # caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
-                    #                       sysid_residual=residual.cpu().numpy())
+                    selection_indices = torch.linspace(0, adaptation_pred.shape[1]-1, steps=adaptation_pred.shape[1], dtype=torch.long)
+                    if PPO_Args.selective_adaptation_module_loss:
+                        # mask out indices corresponding to swing feet
+                        selection_indices = 0
 
-                selection_indices = torch.linspace(0, adaptation_pred.shape[1]-1, steps=adaptation_pred.shape[1], dtype=torch.long)
-                if PPO_Args.selective_adaptation_module_loss:
-                    # mask out indices corresponding to swing feet
-                    selection_indices = 0
-
-                adaptation_loss = F.mse_loss(adaptation_pred[:num_train, selection_indices], adaptation_target[:num_train, selection_indices])
-                adaptation_test_loss = F.mse_loss(adaptation_pred[num_train:, selection_indices], adaptation_target[num_train:, selection_indices])
+                    adaptation_loss = F.mse_loss(adaptation_pred[:num_train, selection_indices], adaptation_target[:num_train, selection_indices])
+                    adaptation_test_loss = F.mse_loss(adaptation_pred[num_train:, selection_indices], adaptation_target[num_train:, selection_indices])
 
 
 
-                self.adaptation_module_optimizer.zero_grad()
-                adaptation_loss.backward()
-                self.adaptation_module_optimizer.step()
+                    self.adaptation_module_optimizer.zero_grad()
+                    adaptation_loss.backward()
+                    self.adaptation_module_optimizer.step()
 
-                mean_adaptation_module_loss += adaptation_loss.item()
-                mean_adaptation_module_test_loss += adaptation_test_loss.item()
+                    mean_adaptation_module_loss += adaptation_loss.item()
+                    mean_adaptation_module_test_loss += adaptation_test_loss.item()
 
         num_updates = PPO_Args.num_learning_epochs * PPO_Args.num_mini_batches
         mean_value_loss /= num_updates

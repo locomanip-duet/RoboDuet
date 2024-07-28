@@ -810,6 +810,7 @@ class LeggedRobot(BaseTask):
                 props[self.num_actions_loco + 4]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j5"]
                 props[self.num_actions_loco + 5]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j6"]
                 props[self.num_actions_loco + 6]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j7"]
+                props[self.num_actions_loco + 7]['stiffness'] = self.cfg.arm.control.stiffness_arm["zarx_j8"]
                 
                 props[self.num_actions_loco + 0]['damping'] = self.cfg.arm.control.damping_arm["zarx_j1"]
                 props[self.num_actions_loco + 1]['damping'] = self.cfg.arm.control.damping_arm["zarx_j2"]
@@ -818,6 +819,7 @@ class LeggedRobot(BaseTask):
                 props[self.num_actions_loco + 4]['damping'] = self.cfg.arm.control.damping_arm["zarx_j5"]
                 props[self.num_actions_loco + 5]['damping'] = self.cfg.arm.control.damping_arm["zarx_j6"]
                 props[self.num_actions_loco + 6]['damping'] = self.cfg.arm.control.damping_arm["zarx_j7"]
+                props[self.num_actions_loco + 7]['damping'] = self.cfg.arm.control.damping_arm["zarx_j8"]
 
         # print(props["\veMode"])
         

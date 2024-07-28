@@ -57,7 +57,7 @@ def train_go1(arg):
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
     
-    Cfg.control.control_type = "P"
+    Cfg.control.control_type = "M"
     if Cfg.control.control_type == "P":
         Cfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
         Cfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
@@ -91,10 +91,10 @@ def train_go1(arg):
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
     
-    DogRunnerArgs.resume = False
-    DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265/checkpoints_dog/ac_weights_009600.pt'
+    DogRunnerArgs.resume = True
+    DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765/checkpoints_dog/ac_weights_009600.pt'
     ArmRunnerArgs.resume = False
-    global_switch.pretrained_to_hybrid_start = 10000  # 2000 with pretrained, 10000 from scratch
+    global_switch.pretrained_to_hybrid_start = 2000  # 2000 with pretrained, 10000 from scratch
     
     if args.wo_two_stage:
         global_switch.pretrained_to_hybrid_start = 0
@@ -125,6 +125,11 @@ def train_go1(arg):
     
     Cfg.asset.render_sphere = True # NOTE no use in headless
     Cfg.hybrid.use_vision = False
+    Cfg.rewards.manip_weight = 3
+    Cfg.reward_scales.dof_vel *= 10
+    Cfg.reward_scales.dof_acc *= 10
+    Cfg.reward_scales.action_rate *= 10
+    
     
     global_switch.init_sigmoid_lr()
     # global_switch.init_linear_lr()
@@ -132,7 +137,7 @@ def train_go1(arg):
     now = datetime.now()
     stem = Path(__file__).stem
     wandb.init(entity="RoboDuet",
-               project="ablation",
+               project="deploy",
                group=args.run_name,
                mode=mode,
                notes=args.notes,
