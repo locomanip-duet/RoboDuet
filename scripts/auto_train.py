@@ -84,6 +84,7 @@ def train_go1(arg):
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
+    Cfg.hybrid.reward_scales.guide = -5.0
     Cfg.reward_scales.arm_energy = -0.00004
     Cfg.reward_scales.loco_energy = -0.00004
 

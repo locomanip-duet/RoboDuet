@@ -220,6 +220,15 @@ class CoRLRewards:
         # Penalize collisions on selected bodies
         return torch.sum(1. * (torch.norm(self.env.contact_forces[:, self.env.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
 
+    def _reward_guide(self):
+        guide = torch.zeros_like(self.env.pitch)
+        down_flag = self.env.delta_z < -self.env.cfg.hybrid.rewards.headupdown_thres
+        up_flag = self.env.delta_z > self.env.cfg.hybrid.rewards.headupdown_thres
+        guide[down_flag] = torch.square(self.env.pitch - 0.4)[down_flag]
+        guide[up_flag] = torch.square(self.env.pitch + 0.4)[up_flag]
+        
+        return guide
+
     def _reward_orientation_control(self):
         # Penalize non flat base orientation
         # import ipdb; ipdb.set_trace()
