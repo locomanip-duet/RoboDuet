@@ -28,22 +28,22 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
             "zarx_j2": 50,
             "zarx_j3": 50,
             "zarx_j4": 150,
-            "zarx_j5": 5,
-            "zarx_j6": 5,
-            "zarx_j7": 5,
-            "zarx_j8": 5,
+            "zarx_j5": 50,
+            "zarx_j6": 50,
+            "zarx_j7": 50,
+            "zarx_j8": 50,
         
     }  # [N*m/rad]
     Cnfg.arm.control.damping_arm = {
             "zarx": 20,
-            "zarx_j1": 20,
+            "zarx_j1": 40,
             "zarx_j2": 20,
             "zarx_j3": 20,
-            "zarx_j4": 20,
-            "zarx_j5": 2,
-            "zarx_j6": 2,
-            "zarx_j7": 2,
-            "zarx_j8": 2,
+            "zarx_j4": 40,
+            "zarx_j5": 20,
+            "zarx_j6": 20,
+            "zarx_j7": 20,
+            "zarx_j8": 20,
     
     }  # [N*m*s/rad]
 

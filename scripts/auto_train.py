@@ -82,7 +82,7 @@ def train_go1(arg):
     Cfg.env.num_observations = 63
 
     
-    Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
+    Cfg.hybrid.reward_scales.tracking_lin_vel = 0.7 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
     Cfg.hybrid.reward_scales.guide = -2.0
     Cfg.reward_scales.arm_energy = -0.00004
