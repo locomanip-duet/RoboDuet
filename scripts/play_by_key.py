@@ -33,6 +33,7 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net_torque/2024-07-28/auto_tra
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-26/auto_train/104835.254987_seed8259"  # ori-10, unlearnstd
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-28/auto_train/153534.455846_seed6756"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-28/auto_train/153534.455846_seed6756"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std/2024-07-29/auto_train/195358.289314_seed1510"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
