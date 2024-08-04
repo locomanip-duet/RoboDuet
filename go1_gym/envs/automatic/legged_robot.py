@@ -821,6 +821,7 @@ class LeggedRobot(BaseTask):
                 props[self.num_actions_loco + 6]['damping'] = self.cfg.arm.control.damping_arm["zarx_j7"]
                 props[self.num_actions_loco + 7]['damping'] = self.cfg.arm.control.damping_arm["zarx_j8"]
 
+            print(props)
         # print(props["\veMode"])
         
         return props

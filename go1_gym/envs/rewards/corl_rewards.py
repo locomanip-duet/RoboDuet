@@ -78,12 +78,12 @@ class CoRLRewards:
     def _reward_vis_manip_commands_tracking_lpy(self):
         lpy = self.env.get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
         lpy_error = torch.sum((torch.abs(lpy - self.env.commands_arm_obs[:, 0:3])) / self.env.commands_arm_lpy_range, dim=1)
-        return lpy_error
+        return torch.exp(-lpy_error)
 
     def _reward_vis_manip_commands_tracking_rpy(self):
         rpy = self.env.get_roll_pitch_yaw_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
         rpy_error = torch.sum((torch.abs(rpy - self.env.commands_arm_obs[:, 3:6])) / self.env.commands_arm_rpy_range, dim=1)
-        return rpy_error
+        return torch.exp(-rpy_error)
 
     def _reward_arm_manip_commands_tracking_combine(self):
         lpy = self.env.get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
@@ -96,7 +96,7 @@ class CoRLRewards:
         # print(f"rpy error: {rpy_error[:20]}")
         # print(f"rwd : {torch.exp(-(lpy_error + rpy_error))[:20]}")
         
-        return torch.exp(-(self.env.cfg.rewards.manip_weight*lpy_error + rpy_error))
+        return torch.exp(-(self.env.cfg.rewards.manip_weight_lpy*lpy_error + self.env.cfg.rewards.manip_weight_rpy*rpy_error))
 
     def _reward_hip_action_l2(self):
         action_l2 = torch.sum(self.env.actions[:, [0, 3, 6, 9]] ** 2, dim=1)
@@ -225,7 +225,7 @@ class CoRLRewards:
         down_flag = self.env.delta_z < -self.env.cfg.hybrid.rewards.headupdown_thres
         up_flag = self.env.delta_z > self.env.cfg.hybrid.rewards.headupdown_thres
         guide[down_flag] = torch.square(self.env.pitch - 0.4)[down_flag]
-        guide[up_flag] = torch.square(self.env.pitch + 0.4)[up_flag]
+        # guide[up_flag] = torch.square(self.env.pitch + 0.4)[up_flag]
         
         return guide
 

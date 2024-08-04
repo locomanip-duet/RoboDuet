@@ -92,7 +92,7 @@ def train_go1(arg):
     Cfg.rewards.terminal_body_height = 0.28
     Cfg.rewards.use_terminal_body_height = True
     
-    DogRunnerArgs.resume = True
+    DogRunnerArgs.resume = args.resume
     DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765/checkpoints_dog/ac_weights_009600.pt'
     ArmRunnerArgs.resume = False
     global_switch.pretrained_to_hybrid_start = 2000  # 2000 with pretrained, 10000 from scratch
@@ -126,7 +126,8 @@ def train_go1(arg):
     
     Cfg.asset.render_sphere = True # NOTE no use in headless
     Cfg.hybrid.use_vision = False
-    Cfg.rewards.manip_weight = 3
+    Cfg.rewards.manip_weight_lpy = 3
+    Cfg.rewards.manip_weight_rpy = 1
     Cfg.reward_scales.dof_vel *= 10
     Cfg.reward_scales.dof_acc *= 10
     Cfg.reward_scales.action_rate *= 10
@@ -134,6 +135,11 @@ def train_go1(arg):
     
     global_switch.init_sigmoid_lr()
     # global_switch.init_linear_lr()
+    
+    if args.robot == "go1":
+        Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
+    elif args.robot == "go2":
+        Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2.urdf'
     
     now = datetime.now()
     stem = Path(__file__).stem
@@ -248,6 +254,7 @@ if __name__ == '__main__':
     parser.add_argument('--tags', nargs='+', default=[])
     parser.add_argument('--notes', type=str, default=None)
     parser.add_argument('--seed', type=int, default=-1)
+    parser.add_argument('--robot', type=str, default="go1", choices=["go1", "go2"])
     parser.add_argument('--wo_two_stage', action='store_true', default=False)
 
     args = parser.parse_args()
