@@ -90,7 +90,7 @@ class ArmActorCritic(nn.Module):
         print(f"Arm Critic MLP: {self.critic_body}")
 
         # Action noise
-        self.std = nn.Parameter(ArmAC_Args.init_noise_std * torch.ones(num_actions) *  0.1)
+        self.std = nn.Parameter(ArmAC_Args.init_noise_std * torch.ones(num_actions))
         # self.std = torch.ones(num_actions, device=kwargs['device']) * ArmAC_Args.init_noise_std
         # self.std[-2:] = 0.1  # deterministic for the last two actions
         self.distribution = None

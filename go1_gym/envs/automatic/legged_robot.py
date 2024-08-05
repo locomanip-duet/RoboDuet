@@ -260,8 +260,8 @@ class LeggedRobot(BaseTask):
             self.add_continue_force()
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
-            if not global_switch.switch_open:
-                self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+            # if global_switch.switch_open:
+            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
             
             if self.cfg.env.keep_arm_fixed:
                 self._keep_arm_fixed()
@@ -283,7 +283,9 @@ class LeggedRobot(BaseTask):
 
         self.dof_pos[:, idx:] = self.default_dof_pos[:, idx:]
         self.dof_vel[:, idx:] = 0.
-        self.gym.set_dof_state_tensor(self.sim, gymtorch.unwrap_tensor(self.dof_state))
+        ret = self.gym.set_dof_state_tensor(self.sim, gymtorch.unwrap_tensor(self.dof_state))
+
+        assert ret, "[ERROR] Failed to set dof state."
 
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
