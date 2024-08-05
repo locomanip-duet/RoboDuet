@@ -260,7 +260,8 @@ class LeggedRobot(BaseTask):
             self.add_continue_force()
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
-            self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+            if not global_switch.switch_open:
+                self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
             
             if self.cfg.env.keep_arm_fixed:
                 self._keep_arm_fixed()

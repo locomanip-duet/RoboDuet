@@ -19,7 +19,7 @@ from isaacgym import gymapi
 from pynput import keyboard
 import threading
 
-ckpt_id = '012000'
+ckpt_id = 'last'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
@@ -35,6 +35,8 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net_torque/2024-07-28/auto_tra
 logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-28/auto_train/153534.455846_seed6756"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std/2024-07-29/auto_train/195358.289314_seed1510"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std_lin_up2/2024-07-30/auto_train/180800.674781_seed7296"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/115156.889211_seed9678"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go2/2024-08-04/auto_train/134907.975219_seed9578"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -211,8 +213,8 @@ def load_dog_policy(logdir, Cfg):
     global ckpt_id
     device = torch.device("cpu")
     if ckpt_id == 'last':
-        ckpt_id += '_dog'
-    ckpt = torch.load(logdir + f'/checkpoints_dog/ac_weights_{str(ckpt_id)}.pt', map_location=device)
+        ckpt_id_ = ckpt_id + '_dog'
+    ckpt = torch.load(logdir + f'/checkpoints_dog/ac_weights_{str(ckpt_id_)}.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
     actor_critic.load_state_dict(ckpt)
@@ -242,8 +244,8 @@ def load_arm_policy(logdir, Cfg):
     
     device = torch.device("cpu")
     if ckpt_id == 'last':
-        ckpt_id += '_arm'
-    ckpt = torch.load(logdir + f'/checkpoints_arm/ac_weights_{str(ckpt_id)}.pt', map_location=device)
+        ckpt_id_ = ckpt_id +'_arm'
+    ckpt = torch.load(logdir + f'/checkpoints_arm/ac_weights_{str(ckpt_id_)}.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
     actor_critic.eval()

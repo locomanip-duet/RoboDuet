@@ -225,7 +225,7 @@ class CoRLRewards:
         down_flag = self.env.delta_z < -self.env.cfg.hybrid.rewards.headupdown_thres
         up_flag = self.env.delta_z > self.env.cfg.hybrid.rewards.headupdown_thres
         guide[down_flag] = torch.square(self.env.pitch - 0.4)[down_flag]
-        # guide[up_flag] = torch.square(self.env.pitch + 0.4)[up_flag]
+        guide[up_flag] = torch.square(self.env.pitch + 0.4)[up_flag]
         
         return guide
 

@@ -6,7 +6,7 @@ from torch.distributions import Normal
 
 class ArmAC_Args(PrefixProto, cli=False):
     # policy
-    init_noise_std = 1.0
+    init_noise_std = 0.1
     actor_hidden_dims = [512, 256, 128]
     critic_hidden_dims = [512, 256, 128]
     activation = 'elu'  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
