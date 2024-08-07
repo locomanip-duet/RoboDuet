@@ -37,6 +37,7 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std/2024-07-29/auto_t
 logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std_lin_up2/2024-07-30/auto_train/180800.674781_seed7296"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/115156.889211_seed9678"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go2/2024-08-04/auto_train/134907.975219_seed9578"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/233050.190809_seed3037"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':

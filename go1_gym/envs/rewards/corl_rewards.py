@@ -114,13 +114,34 @@ class CoRLRewards:
         # Penalize torques
         return torch.sum(torch.square(self.env.torques), dim=1)
 
+    def _reward_dof_pos(self):
+        # Penalize dof positions
+        return torch.sum(torch.square(self.env.dof_pos - self.env.default_dof_pos), dim=1)
+
+    def _reward_arm_dof_vel(self):
+        # Penalize dof velocities
+        return torch.sum(torch.square(self.env.dof_vel[..., self.env.num_actions_loco:]), dim=1)
+
+    def _reward_arm_dof_acc(self):
+        # Penalize dof accelerations
+        return torch.sum(torch.square((self.env.last_dof_vel - self.env.dof_vel)[..., self.env.num_actions_loco:] / self.env.dt), dim=1)
+
+    def _reward_arm_action_rate(self):
+        # Penalize changes in actions
+        return torch.sum(torch.square(self.env.last_actions - self.env.actions)[..., self.env.num_actions_loco:], dim=1)
+
+
+    def _reward_dof_vel(self):
+        # Penalize dof velocities
+        return torch.sum(torch.square(self.env.dof_vel[..., :self.env.num_actions_loco]), dim=1)
+
     def _reward_dof_acc(self):
         # Penalize dof accelerations
-        return torch.sum(torch.square((self.env.last_dof_vel - self.env.dof_vel) / self.env.dt), dim=1)
+        return torch.sum(torch.square((self.env.last_dof_vel - self.env.dof_vel)[..., :self.env.num_actions_loco] / self.env.dt), dim=1)
 
     def _reward_action_rate(self):
         # Penalize changes in actions
-        return torch.sum(torch.square(self.env.last_actions - self.env.actions), dim=1)
+        return torch.sum(torch.square(self.env.last_actions - self.env.actions)[..., :self.env.num_actions_loco], dim=1)
 
     def _reward_collision(self):
         # Penalize collisions on selected bodies
@@ -158,14 +179,6 @@ class CoRLRewards:
             reward += - (desired_contact[:, i] * (
                         1 - torch.exp(-1 * foot_velocities[:, i] ** 2 / self.env.cfg.rewards.gait_vel_sigma)))
         return reward / 4
-
-    def _reward_dof_pos(self):
-        # Penalize dof positions
-        return torch.sum(torch.square(self.env.dof_pos - self.env.default_dof_pos), dim=1)
-
-    def _reward_dof_vel(self):
-        # Penalize dof velocities
-        return torch.sum(torch.square(self.env.dof_vel), dim=1)
 
     def _reward_action_smoothness_1(self):
         # Penalize changes in actions

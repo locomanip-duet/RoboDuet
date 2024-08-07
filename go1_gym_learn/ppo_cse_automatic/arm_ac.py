@@ -127,8 +127,13 @@ class ArmActorCritic(nn.Module):
         latent = self.adaptation_module(observation_history)
         mean = self.actor_body(torch.cat((obs, latent), dim=-1))
         mean[..., -2:] = torch.tanh(mean[..., -2:])
-        self.distribution = Normal(mean, mean * 0. + self.std)
+        try:
+            self.distribution = Normal(mean, mean * 0. + self.std)
         # print("std: ", self.std)
+        except Exception as e:
+            print(f"An exception occurred: {str(e)}")
+            import ipdb; ipdb.set_trace()
+            pass
 
     def act(self, observation_history, **kwargs):
         self.update_distribution(observation_history)
