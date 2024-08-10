@@ -38,6 +38,12 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std_lin_up2/2024-07-3
 logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/115156.889211_seed9678"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go2/2024-08-04/auto_train/134907.975219_seed9578"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/233050.190809_seed3037"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-08-08/auto_train/115208.492857_seed122"
+
+logdir = "/home/a4090/hybrid_improve_dwb/runs/deploy/2024-08-08/auto_train/204439.440310_seed1357"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1_rai/2024-08-07/auto_train/100528.721289_seed8457"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/deploy/2024-08-08/auto_train/204439.440310_seed1357"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/adapt_dofx10/2024-08-09/auto_train/155105.439947_seed9913"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -215,6 +221,8 @@ def load_dog_policy(logdir, Cfg):
     device = torch.device("cpu")
     if ckpt_id == 'last':
         ckpt_id_ = ckpt_id + '_dog'
+    else:
+        ckpt_id_ = ckpt_id.zfill(6)
     ckpt = torch.load(logdir + f'/checkpoints_dog/ac_weights_{str(ckpt_id_)}.pt', map_location=device)
     # for key, value in ckpt.items():
     #     print(key, value.shape)
@@ -246,6 +254,8 @@ def load_arm_policy(logdir, Cfg):
     device = torch.device("cpu")
     if ckpt_id == 'last':
         ckpt_id_ = ckpt_id +'_arm'
+    else:
+        ckpt_id_ = ckpt_id.zfill(6)
     ckpt = torch.load(logdir + f'/checkpoints_arm/ac_weights_{str(ckpt_id_)}.pt', map_location=device)
     actor_critic.load_state_dict(ckpt)
     
