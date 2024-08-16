@@ -8,4 +8,5 @@ struct leg_control_data_lcmt
     int64_t timestamp_us;
     int64_t id;
     int64_t robot_id;
+    float q_arm[7];
 }

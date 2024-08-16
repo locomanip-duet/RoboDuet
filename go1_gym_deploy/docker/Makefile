@@ -36,4 +36,4 @@ autostart:
 		--name="foxy_controller" \
 		jetson-model-deployment tail -f /dev/null
 		docker start foxy_controller
-		docker exec foxy_controller bash -c 'cd /home/isaac/go1_gym/ && python3 setup.py install && cd go1_gym_deploy/scripts && ls && python3 deploy_policy.py'
+		docker exec foxy_controller bash -c 'cd /home/isaac/go1_gym/ && python3 setup.py install'

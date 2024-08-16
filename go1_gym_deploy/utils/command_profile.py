@@ -1,4 +1,5 @@
 import torch
+from go1_gym_deploy.utils.cheetah_state_estimator import quat_apply, StateEstimator
 
 
 class CommandProfile:
@@ -96,11 +97,10 @@ class ElegantGaitProfile(CommandProfile):
         self.commands[:len_command_sequence, 8] = torch.Tensor(command_sequence["duration_cmd"])
 
 class RCControllerProfile(CommandProfile):
-    def __init__(self, dt, state_estimator, x_scale=1.0, y_scale=1.0, yaw_scale=1.0, probe_vel_multiplier=1.0):
+    def __init__(self, dt, state_estimator, x_scale=1.0, yaw_scale=1.0, probe_vel_multiplier=1.0):
         super().__init__(dt)
-        self.state_estimator = state_estimator
+        self.state_estimator: StateEstimator = state_estimator
         self.x_scale = x_scale
-        self.y_scale = y_scale
         self.yaw_scale = yaw_scale
 
         self.probe_vel_multiplier = probe_vel_multiplier
@@ -113,13 +113,14 @@ class RCControllerProfile(CommandProfile):
 
         command = self.state_estimator.get_command()
         command[0] = command[0] * self.x_scale
-        command[1] = command[1] * self.y_scale
+        command[1] = command[1] * self.x_scale
         command[2] = command[2] * self.yaw_scale
-
         reset_timer = False
 
         if probe:
+            import ipdb; ipdb.set_trace()
             command[0] = command[0] * self.probe_vel_multiplier
+            command[1] = command[1] * self.probe_vel_multiplier
             command[2] = command[2] * self.probe_vel_multiplier
 
         # check for action buttons
@@ -139,7 +140,6 @@ class RCControllerProfile(CommandProfile):
                 # execute the triggered action
                 if self.currently_triggered[button] and t < self.triggered_commands[button].max_timestep:
                     command = self.triggered_commands[button].get_command(t)
-
 
         return command, reset_timer
 
@@ -206,7 +206,6 @@ class KeyboardProfile(CommandProfile):
     def get_command(self, t):
         events = self.gym.query_viewer_action_events(self.viewer)
         events_dict = {event.action: event.value for event in events}
-        print(events_dict)
         if "FORWARD" in events_dict and events_dict["FORWARD"] == 1.0: self.keyb_command[0] = 1.0
         if "FORWARD" in events_dict and events_dict["FORWARD"] == 0.0: self.keyb_command[0] = 0.0
         if "REVERSE" in events_dict and events_dict["REVERSE"] == 1.0: self.keyb_command[0] = -1.0
@@ -219,9 +218,6 @@ class KeyboardProfile(CommandProfile):
         self.command[0] = self.keyb_command[0] * self.x_scale
         self.command[1] = self.keyb_command[2] * self.y_scale
         self.command[2] = self.keyb_command[1] * self.yaw_scale
-
-        print(self.command)
-
         return self.command
 
 

@@ -1,0 +1,4 @@
+struct april_message_lcmt
+{
+    float ee_pose[6];
+}

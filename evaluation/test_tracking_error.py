@@ -206,7 +206,7 @@ class TrackingTester:
 
         def policy(obs, info={}):
             latent = adaptation_module.forward(obs["obs_history"].to(self.device))
-            action = body.forward(torch.cat((obs["obs_history"].to(self.device), latent), dim=-1))
+            action = body.forward(torch.cat((obs["obs"].to(self.device), latent), dim=-1))
             info['latent'] = latent
             return action
         
@@ -508,7 +508,8 @@ if __name__ == "__main__":
     ckpt_folder = "/home/pgp/agile/hybrid_improve_dwb/runs/ckpts/"+args.algo+"/"+args.seed
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/download/go1_torque_0704"
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/232428.254725_seed7153"
-    args.ckpt_number = "054000"
+    ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/adapt_dofx10/2024-08-09/auto_train/155105.439947_seed9913"
+    args.ckpt_number = "080000"
     runner = TrackingTester(
         vel = args.vel,
         num_envs = args.num_envs,

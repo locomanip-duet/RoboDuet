@@ -72,10 +72,35 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
     
     # }  # [N*m*s/rad]
 
+    # Cnfg.arm.control.stiffness_arm = {
+    #         "zarx": 50,
+    #         "zarx_j1": 40,
+    #         "zarx_j2": 300,
+    #         "zarx_j3": 100,
+    #         "zarx_j4": 25,
+    #         "zarx_j5": 25,
+    #         "zarx_j6": 25,
+    #         "zarx_j7": 50,
+    #         "zarx_j8": 50,
+        
+    # }  # [N*m/rad]
+    # Cnfg.arm.control.damping_arm = {
+    #         "zarx": 20,
+    #         "zarx_j1": 3,
+    #         "zarx_j2": 20,
+    #         "zarx_j3": 6,
+    #         "zarx_j4": 2,
+    #         "zarx_j5": 2,
+    #         "zarx_j6": 2,
+    #         "zarx_j7": 20,
+    #         "zarx_j8": 20,
+    
+    # }  # [N*m*s/rad]
+    
     Cnfg.arm.control.stiffness_arm = {
             "zarx": 50,
             "zarx_j1": 40,
-            "zarx_j2": 300,
+            "zarx_j2": 100,
             "zarx_j3": 100,
             "zarx_j4": 25,
             "zarx_j5": 25,
@@ -87,15 +112,15 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
     Cnfg.arm.control.damping_arm = {
             "zarx": 20,
             "zarx_j1": 3,
-            "zarx_j2": 20,
+            "zarx_j2": 11,
             "zarx_j3": 6,
             "zarx_j4": 2,
             "zarx_j5": 2,
             "zarx_j6": 2,
             "zarx_j7": 20,
             "zarx_j8": 20,
-    
     }  # [N*m*s/rad]
+
 
     Cnfg.dog.control.stiffness_leg = {'joint': 35.}  # [N*m/rad]
     Cnfg.dog.control.damping_leg = {'joint': 1.}  # [N*m*s/rad]

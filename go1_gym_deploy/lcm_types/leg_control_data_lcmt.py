@@ -9,23 +9,19 @@ except ImportError:
     from io import BytesIO
 import struct
 
-
 class leg_control_data_lcmt(object):
-    __slots__ = ["q", "qd", "p", "v", "tau_est", "timestamp_us", "id", "robot_id"]
-
-    __typenames__ = ["float", "float", "float", "float", "float", "int64_t", "int64_t", "int64_t"]
-
-    __dimensions__ = [[12], [12], [12], [12], [12], None, None, None]
+    __slots__ = ["q", "qd", "p", "v", "tau_est", "timestamp_us", "id", "robot_id", "q_arm"]
 
     def __init__(self):
-        self.q = [0.0 for dim0 in range(12)]
-        self.qd = [0.0 for dim0 in range(12)]
-        self.p = [0.0 for dim0 in range(12)]
-        self.v = [0.0 for dim0 in range(12)]
-        self.tau_est = [0.0 for dim0 in range(12)]
+        self.q = [ 0.0 for dim0 in range(12) ]
+        self.qd = [ 0.0 for dim0 in range(12) ]
+        self.p = [ 0.0 for dim0 in range(12) ]
+        self.v = [ 0.0 for dim0 in range(12) ]
+        self.tau_est = [ 0.0 for dim0 in range(12) ]
         self.timestamp_us = 0
         self.id = 0
         self.robot_id = 0
+        self.q_arm = [ 0.0 for dim0 in range(7) ]
 
     def encode(self):
         buf = BytesIO()
@@ -40,6 +36,7 @@ class leg_control_data_lcmt(object):
         buf.write(struct.pack('>12f', *self.v[:12]))
         buf.write(struct.pack('>12f', *self.tau_est[:12]))
         buf.write(struct.pack(">qqq", self.timestamp_us, self.id, self.robot_id))
+        buf.write(struct.pack('>7f', *self.q_arm[:7]))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -49,7 +46,6 @@ class leg_control_data_lcmt(object):
         if buf.read(8) != leg_control_data_lcmt._get_packed_fingerprint():
             raise ValueError("Decode error")
         return leg_control_data_lcmt._decode_one(buf)
-
     decode = staticmethod(decode)
 
     def _decode_one(buf):
@@ -60,16 +56,16 @@ class leg_control_data_lcmt(object):
         self.v = struct.unpack('>12f', buf.read(48))
         self.tau_est = struct.unpack('>12f', buf.read(48))
         self.timestamp_us, self.id, self.robot_id = struct.unpack(">qqq", buf.read(24))
+        self.q_arm = struct.unpack('>7f', buf.read(28))
         return self
-
     _decode_one = staticmethod(_decode_one)
 
+    _hash = None
     def _get_hash_recursive(parents):
         if leg_control_data_lcmt in parents: return 0
-        tmphash = (0xa9a928b534bfc487) & 0xffffffffffffffff
-        tmphash = (((tmphash << 1) & 0xffffffffffffffff) + (tmphash >> 63)) & 0xffffffffffffffff
+        tmphash = (0x1ea9b921eed808e5) & 0xffffffffffffffff
+        tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
-
     _get_hash_recursive = staticmethod(_get_hash_recursive)
     _packed_fingerprint = None
 
@@ -77,9 +73,5 @@ class leg_control_data_lcmt(object):
         if leg_control_data_lcmt._packed_fingerprint is None:
             leg_control_data_lcmt._packed_fingerprint = struct.pack(">Q", leg_control_data_lcmt._get_hash_recursive([]))
         return leg_control_data_lcmt._packed_fingerprint
-
     _get_packed_fingerprint = staticmethod(_get_packed_fingerprint)
 
-    def get_hash(self):
-        """Get the LCM hash of the struct"""
-        return struct.unpack(">Q", leg_control_data_lcmt._get_packed_fingerprint())[0]

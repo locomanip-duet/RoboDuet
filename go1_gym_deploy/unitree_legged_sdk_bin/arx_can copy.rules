@@ -1,0 +1,2 @@
+SUBSYSTEM=="tty", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="117e",
+ATTRS{serial}=="207B328C5052", SYMLINK+="canable0"

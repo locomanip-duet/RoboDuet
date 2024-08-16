@@ -4,6 +4,7 @@ import threading
 import time
 
 import numpy as np
+import torch
 
 from go1_gym_deploy.lcm_types.leg_control_data_lcmt import leg_control_data_lcmt
 from go1_gym_deploy.lcm_types.rc_command_lcmt import rc_command_lcmt
@@ -12,6 +13,18 @@ from go1_gym_deploy.lcm_types.camera_message_lcmt import camera_message_lcmt
 from go1_gym_deploy.lcm_types.camera_message_rect_wide import camera_message_rect_wide
 
 
+def quat_apply(a, b):
+    if not isinstance(a, torch.Tensor):
+        a = torch.tensor(a)
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b)
+    shape = b.shape
+    a = a.reshape(-1, 4)
+    b = b.reshape(-1, 3)
+    xyz = a[:, :3]
+    t = xyz.cross(b, dim=-1) * 2
+    return (b + a[:, 3:] * t + xyz.cross(t, dim=-1)).view(shape)
+
 def get_rpy_from_quaternion(q):
     w, x, y, z = q
     r = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x ** 2 + y ** 2))
@@ -19,6 +32,65 @@ def get_rpy_from_quaternion(q):
     y = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y ** 2 + z ** 2))
     return np.array([r, p, y])
 
+def quat_from_euler_xyz(roll, pitch, yaw):
+    cy = np.cos(yaw * 0.5)
+    sy = np.sin(yaw * 0.5)
+    cr = np.cos(roll * 0.5)
+    sr = np.sin(roll * 0.5)
+    cp = np.cos(pitch * 0.5)
+    sp = np.sin(pitch * 0.5)
+
+    qw = cy * cr * cp + sy * sr * sp
+    qx = cy * sr * cp - sy * cr * sp
+    qy = cy * cr * sp + sy * sr * cp
+    qz = sy * cr * cp - cy * sr * sp
+
+    return np.stack([qx, qy, qz, qw], axis=-1)
+
+def quat_to_angle(quat):
+    y_vector = torch.tensor([0., 1., 0.]).double()
+    z_vector = torch.tensor([0., 0., 1.]).double()
+    x_vector = torch.tensor([1., 0., 0.]).double()
+    roll_vec = quat_apply(quat, y_vector) # [0,1,0]
+    roll = torch.atan2(roll_vec[2], roll_vec[1]) # roll angle = arctan2(z, y)
+    pitch_vec = quat_apply(quat, z_vector) # [0,0,1]
+    pitch = torch.atan2(pitch_vec[0], pitch_vec[2]) # pitch angle = arctan2(x, z)
+    yaw_vec = quat_apply(quat, x_vector) # [1,0,0]
+    yaw = torch.atan2(yaw_vec[1], yaw_vec[0]) # yaw angle = arctan2(y, x)
+    
+    return torch.stack([roll, pitch, yaw], dim=-1)
+
+def quat_mul(a, b):
+    assert a.shape == b.shape
+    shape = a.shape
+    a = a.reshape(-1, 4)
+    b = b.reshape(-1, 4)
+
+    x1, y1, z1, w1 = a[:, 0], a[:, 1], a[:, 2], a[:, 3]
+    x2, y2, z2, w2 = b[:, 0], b[:, 1], b[:, 2], b[:, 3]
+    ww = (z1 + x1) * (x2 + y2)
+    yy = (w1 - y1) * (w2 + z2)
+    zz = (w1 + y1) * (w2 - z2)
+    xx = ww + yy + zz
+    qq = 0.5 * (xx + (z1 - x1) * (x2 - y2))
+    w = qq - ww + (z1 - y1) * (y2 - z2)
+    x = qq - xx + (x1 + w1) * (x2 + w2)
+    y = qq - yy + (w1 - x1) * (y2 + z2)
+    z = qq - zz + (z1 + y1) * (w2 - x2)
+
+    quat = np.stack([x, y, z, w], axis=-1).reshape(shape)
+
+    return quat
+
+def rpy_to_abg(roll, pitch, yaw):
+    zero_vec = np.zeros_like(roll)
+    q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
+    q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
+    q3 = quat_from_euler_xyz(roll, zero_vec, zero_vec)
+    quats = quat_mul(q1, quat_mul(q2, q3))  # np, (4,)
+    abg = quat_to_angle(quats).numpy()
+    
+    return abg
 
 def get_rotation_matrix_from_rpy(rpy):
     """
@@ -53,13 +125,15 @@ class StateEstimator:
 
         # reverse legs
         self.joint_idxs = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
+        self.wb_joint_idxs = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8,
+                              12, 13, 14, 15, 16, 17]
         self.contact_idxs = [1, 0, 3, 2]
         # self.joint_idxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
         self.lc = lc
 
-        self.joint_pos = np.zeros(12)
-        self.joint_vel = np.zeros(12)
+        self.joint_pos = np.zeros(18)
+        self.joint_vel = np.zeros(18)
         self.tau_est = np.zeros(12)
         self.world_lin_vel = np.zeros(3)
         self.world_ang_vel = np.zeros(3)
@@ -97,34 +171,29 @@ class StateEstimator:
         self.right_lower_left_switch_pressed = 0
         self.right_lower_right_switch_pressed = 0
 
-        # default trotting gait
-        self.cmd_freq = 3.0
-        self.cmd_phase = 0.5
-        self.cmd_offset = 0.0
-        self.cmd_duration = 0.5
-
 
         self.init_time = time.time()
         self.received_first_legdata = False
+        self.received_first_armdata = False
 
-        self.imu_subscription = self.lc.subscribe("state_estimator_data", self._imu_cb)
+        self.imu_subscription = self.lc.subscribe("leg_state_estimator_data", self._imu_cb)
         self.legdata_state_subscription = self.lc.subscribe("leg_control_data", self._legdata_cb)
         self.rc_command_subscription = self.lc.subscribe("rc_command", self._rc_command_cb)
 
-        if use_cameras:
-            for cam_id in [1, 2, 3, 4, 5]:
-                self.camera_subscription = self.lc.subscribe(f"camera{cam_id}", self._camera_cb)
-            self.camera_names = ["front", "bottom", "left", "right", "rear"]
-            for cam_name in self.camera_names:
-                self.camera_subscription = self.lc.subscribe(f"rect_image_{cam_name}", self._rect_camera_cb)
-        self.camera_image_left = None
-        self.camera_image_right = None
-        self.camera_image_front = None
-        self.camera_image_bottom = None
-        self.camera_image_rear = None
-
         self.body_loc = np.array([0, 0, 0])
         self.body_quat = np.array([0, 0, 0, 1])
+
+        self.cmd_l = 0.4
+        self.cmd_p = 0.15
+        self.cmd_y = 0.0
+        self.cmd_alpha = 0.0
+        self.cmd_beta = 0.0
+        self.cmd_gamma = 0.0
+
+        self.cmd_dx = 0.0
+        self.cmd_dy = 0.0
+        self.cmd_dz = 0.0
+        
 
     def get_body_linear_vel(self):
         self.body_lin_vel = np.dot(self.R.T, self.world_lin_vel)
@@ -146,89 +215,97 @@ class StateEstimator:
         return self.euler
 
     def get_command(self):
-        MODES_LEFT = ["body_height", "lat_vel", "stance_width"]
-        MODES_RIGHT = ["step_frequency", "footswing_height", "body_pitch"]
+        MODES_LEFT = ["target_l", "target_p", "target_y", "stop"]
+        MODES_RIGHT = ["target_alpha", "target_beta", "target_gamma", "stop"]
+        #LONGCOMMAND = ['stop', 'start', 'left', 'right',
+                #'up',
+        #        "fix_angle",
+        #        'updown']
 
-        if self.left_upper_switch_pressed:
-            self.ctrlmode_left = (self.ctrlmode_left + 1) % 3
+
+        if self.left_upper_switch_pressed: # L1
+            self.ctrlmode_left = (self.ctrlmode_left + 1) % 4
             self.left_upper_switch_pressed = False
-        if self.right_upper_switch_pressed:
-            self.ctrlmode_right = (self.ctrlmode_right + 1) % 3
+            print(f"mode has been changed to {MODES_LEFT[self.ctrlmode_left]}")
+        if self.right_upper_switch_pressed: # R1
+            self.ctrlmode_right = (self.ctrlmode_right + 1) % 4
             self.right_upper_switch_pressed = False
+            print(f"mode has been changed to {MODES_RIGHT[self.ctrlmode_right]}")
+       
+
+        # if self.right_upper_switch_pressed: # R1
+        #     self.ctrlmode_right = (self.ctrlmode_right + 1) % 6
+        #    self.right_upper_switch_pressed = False
+
 
         MODE_LEFT = MODES_LEFT[self.ctrlmode_left]
         MODE_RIGHT = MODES_RIGHT[self.ctrlmode_right]
+        #LONGCOM = LONGCOMMAND[self.ctrlmode_right]
 
         # always in use
-        cmd_x = 1 * self.left_stick[1]
-        cmd_yaw = -1 * self.right_stick[0]
+        cmd_x = 1 * self.left_stick[1]  # -1 ~ 1
+        cmd_y = 1 * self.left_stick[0]  # -1 ~ 1
+        cmd_yaw = -1 * self.right_stick[0]  # -1 ~ 1
 
-        # default values
-        cmd_y = 0.  # -1 * self.left_stick[0]
-        cmd_height = 0.
-        cmd_footswing = 0.08
-        cmd_stance_width = 0.33
-        cmd_stance_length = 0.40
-        cmd_ori_pitch = 0.
-        cmd_ori_roll = 0.
-        cmd_freq = 3.0
+       
+        # if MODE_LEFT == "target_l":
+        #     self.cmd_l = 0.2 * self.left_stick[0] + 0.5  # 0.3 ~ 0.7
+        # elif MODE_LEFT == "target_p":
+        #     self.cmd_p = np.clip(np.pi/3 * self.left_stick[0] + 0.15, -0.7, 1)  # -pi/3 ~ pi/3
+        # elif MODE_LEFT == "target_y":
+        #     self.cmd_y = np.pi/3 * self.left_stick[0]  # -pi/3 ~ pi/3
+        # if MODE_RIGHT == "target_alpha":
+        #     self.cmd_alpha = np.pi/3 * self.right_stick[1]  # -pi/3 ~ pi/3
+        # elif MODE_RIGHT == "target_beta":
+        #     self.cmd_beta = np.pi/3 * self.right_stick[1]  # -pi/3 ~ pi/3
+        # elif MODE_RIGHT == "target_gamma":
+        #     self.cmd_gamma = np.pi/3 * self.right_stick[1]  # -pi/3 ~ pi/3
+        
+        #if LONGCOM == "start":
+        #    return np.array([0.2, 0, 0.2, 0.5, 0.05, 0.05, 0, 0, 0])
+        #elif LONGCOM == "left":
+        #    return np.array([0.3, 0, 0.1, 0.55, -0.4, -0.6, 0, 0, 0.5])
+        #elif LONGCOM == "right":
+        #    return np.array([0.3, 0, 0, 0.45, -0.4, 0.5, 0.7, 0, -0.3])
+        #elif LONGCOM == "up":
+        #    return np.array([0.3, 0, -0.05, 0.5, 0.3, 0, -0.8, -0.7, 0])
+        #elif LONGCOM == "updown":
+        #    return np.array([0.11, 0, 0, 0.5, 0.7, 0, 0, 0.8, 0 ])
+        #elif LONGCOM == "fix_angle":
+        #    return np.array([0.11, 0, -0.2, 0.5, 0.7, 0, 0, 0.8, 0 ])
 
-        # joystick commands
-        if MODE_LEFT == "body_height":
-            cmd_height = 0.3 * self.left_stick[0]
-        elif MODE_LEFT == "lat_vel":
-            cmd_y = 0.6 * self.left_stick[0]
-        elif MODE_LEFT == "stance_width":
-            cmd_stance_width = 0.275 + 0.175 * self.left_stick[0]
-        if MODE_RIGHT == "step_frequency":
-            min_freq = 2.0
-            max_freq = 4.0
-            cmd_freq = (1 + self.right_stick[1]) / 2 * (max_freq - min_freq) + min_freq
-        elif MODE_RIGHT == "footswing_height":
-            cmd_footswing = max(0, self.right_stick[1]) * 0.32 + 0.03
-        elif MODE_RIGHT == "body_pitch":
-            cmd_ori_pitch = -0.4 * self.right_stick[1]
 
-        # gait buttons
-        if self.mode == 0:
-            self.cmd_phase = 0.5
-            self.cmd_offset = 0.0
-            self.cmd_bound = 0.0
-            self.cmd_duration = 0.5
-        elif self.mode == 1:
-            self.cmd_phase = 0.0
-            self.cmd_offset = 0.0
-            self.cmd_bound = 0.0
-            self.cmd_duration = 0.5
-        elif self.mode == 2:
-            self.cmd_phase = 0.0
-            self.cmd_offset = 0.5
-            self.cmd_bound = 0.0
-            self.cmd_duration = 0.5
-        elif self.mode == 3:
-            self.cmd_phase = 0.0
-            self.cmd_offset = 0.0
-            self.cmd_bound = 0.5
-            self.cmd_duration = 0.5
-        else:
-            self.cmd_phase = 0.5
-            self.cmd_offset = 0.0
-            self.cmd_bound = 0.0
-            self.cmd_duration = 0.5
+        if MODE_LEFT == "target_l":
+            self.cmd_l = min(max((0.3 * self.left_stick[1] + 0.5), 0.8), 0.3)  # 0.3 ~ 0.8
+        elif MODE_LEFT == "target_p":
+            self.cmd_p = min(max((np.pi/3 * self.left_stick[1]), -np.pi/3), np.pi/3)   # -pi/3 ~ pi/3
+        elif MODE_LEFT == "target_y":
+            self.cmd_y = min(max((np.pi/2 * self.left_stick[1]), -np.pi/2), np.pi/2)  # -pi/3 ~ pi/3
+        if MODE_RIGHT == "target_alpha":
+            self.cmd_alpha = min(max((np.pi * 0.45 * self.right_stick[1]), -np.pi * 0.45), np.pi * 0.45)  # -pi/3 ~ pi/3
+        elif MODE_RIGHT == "target_beta":
+            self.cmd_beta = min(max((np.pi/2 * self.right_stick[1]), -1.0472), 1.0472)  # -pi/3 ~ pi/3
+        elif MODE_RIGHT == "target_gamma":
+            self.cmd_gamma = min(max((np.pi/2 * self.right_stick[1]), -1.3090), 1.3090) # -pi/3 ~ pi/3
 
-        return np.array([cmd_x, cmd_y, cmd_yaw, cmd_height, cmd_freq, self.cmd_phase, self.cmd_offset, self.cmd_bound,
-                         self.cmd_duration, cmd_footswing, cmd_ori_pitch, cmd_ori_roll, cmd_stance_width,
-                         cmd_stance_length, 0, 0, 0, 0, 0])
+        self.cmd_alpha, self.cmd_beta, self.cmd_gamma = rpy_to_abg(self.cmd_alpha, self.cmd_beta, self.cmd_gamma)
+
+
+        # TODO : 设置正确的 observation
+        # return np.array([cmd_x, 0, cmd_yaw, 0.45, 0.5, 0.2, np.pi/4, 0, -np.pi/4])
+        # return np.array([0, 0, 0, 0.6, 0.3, 0.2, np.pi/6, np.pi/6, -np.pi/4])
+        # return np.array([0, 0, 0, 0.45, 0.5, 0.2, np.pi/4, 0, -np.pi/4])
+        # return np.array([cmd_x, 0, cmd_yaw, self.cmd_l, self.cmd_p, self.cmd_y, self.cmd_alpha, self.cmd_beta, self.cmd_gamma])
+        return np.array([cmd_x, cmd_y, cmd_yaw, self.cmd_l, self.cmd_p, self.cmd_y, self.cmd_alpha, self.cmd_beta, self.cmd_gamma])
 
     def get_buttons(self):
         return np.array([self.left_lower_left_switch, self.left_upper_switch, self.right_lower_right_switch, self.right_upper_switch])
 
     def get_dof_pos(self):
-        # print("dofposquery", self.joint_pos[self.joint_idxs])
-        return self.joint_pos[self.joint_idxs]
+        return self.joint_pos[self.wb_joint_idxs]
 
     def get_dof_vel(self):
-        return self.joint_vel[self.joint_idxs]
+        return self.joint_vel[self.wb_joint_idxs]
 
     def get_tau_est(self):
         return self.tau_est[self.joint_idxs]
@@ -264,14 +341,14 @@ class StateEstimator:
             print(f"First legdata: {time.time() - self.init_time}")
 
         msg = leg_control_data_lcmt.decode(data)
-        # print(msg.q)
-        self.joint_pos = np.array(msg.q)
-        self.joint_vel = np.array(msg.qd)
+        self.joint_pos[:12] = np.array(msg.q)[:12]
+        self.joint_vel[:12] = np.array(msg.qd)[:12]
+        self.joint_pos[12:] = np.array(msg.q_arm)[:6]
+        self.joint_vel[12:] = 0.
         self.tau_est = np.array(msg.tau_est)
-        # print(f"update legdata {msg.id}")
+
 
     def _imu_cb(self, channel, data):
-        # print("update imu")
         msg = state_estimator_lcmt.decode(data)
 
         self.euler = np.array(msg.rpy)
@@ -313,64 +390,6 @@ class StateEstimator:
         self.right_lower_left_switch = msg.right_lower_left_switch
         self.right_lower_right_switch = msg.right_lower_right_switch
 
-        # print(self.right_stick, self.left_stick)
-
-    def _camera_cb(self, channel, data):
-        msg = camera_message_lcmt.decode(data)
-
-        img = np.fromstring(msg.data, dtype=np.uint8)
-        img = img.reshape((3, 200, 464)).transpose(1, 2, 0)
-
-        cam_id = int(channel[-1])
-        if cam_id == 1:
-            self.camera_image_front = img
-        elif cam_id == 2:
-            self.camera_image_bottom = img
-        elif cam_id == 3:
-            self.camera_image_left = img
-        elif cam_id == 4:
-            self.camera_image_right = img
-        elif cam_id == 5:
-            self.camera_image_rear = img
-        else:
-            print("Image received from camera with unknown ID#!")
-
-        #im = Image.fromarray(img).convert('RGB')
-
-        #im.save("test_image_" + channel + ".jpg")
-        #print(channel)
-
-    def _rect_camera_cb(self, channel, data):
-        message_types = [camera_message_rect_wide, camera_message_rect_wide, camera_message_rect_wide,
-                         camera_message_rect_wide, camera_message_rect_wide]
-        image_shapes = [(116, 100, 3), (116, 100, 3), (116, 100, 3), (116, 100, 3), (116, 100, 3)]
-
-        cam_name = channel.split("_")[-1]
-        # print(f"received py from {cam_name}")
-        cam_id = self.camera_names.index(cam_name) + 1
-
-        msg = message_types[cam_id - 1].decode(data)
-
-        img = np.fromstring(msg.data, dtype=np.uint8)
-        img = np.flip(np.flip(
-            img.reshape((image_shapes[cam_id - 1][2], image_shapes[cam_id - 1][1], image_shapes[cam_id - 1][0])),
-            axis=0), axis=1).transpose(1, 2, 0)
-        # print(img.shape)
-        # img = np.flip(np.flip(img.reshape(image_shapes[cam_id - 1]), axis=0), axis=1)[:, :,
-        #       [2, 1, 0]]  # .transpose(1, 2, 0)
-
-        if cam_id == 1:
-            self.camera_image_front = img
-        elif cam_id == 2:
-            self.camera_image_bottom = img
-        elif cam_id == 3:
-            self.camera_image_left = img
-        elif cam_id == 4:
-            self.camera_image_right = img
-        elif cam_id == 5:
-            self.camera_image_rear = img
-        else:
-            print("Image received from camera with unknown ID#!")
 
     def poll(self, cb=None):
         t = time.time()
@@ -379,14 +398,10 @@ class StateEstimator:
                 timeout = 0.01
                 rfds, wfds, efds = select.select([self.lc.fileno()], [], [], timeout)
                 if rfds:
-                    # print("message received!")
                     self.lc.handle()
-                    # print(f'Freq {1. / (time.time() - t)} Hz'); t = time.time()
                 else:
                     continue
-                    # print(f'waiting for message... Freq {1. / (time.time() - t)} Hz'); t = time.time()
-                #    if cb is not None:
-                #        cb()
+
         except KeyboardInterrupt:
             pass
 

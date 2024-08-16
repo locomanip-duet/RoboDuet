@@ -9,27 +9,20 @@ except ImportError:
     from io import BytesIO
 import struct
 
-
 class state_estimator_lcmt(object):
-    __slots__ = ["p", "vWorld", "vBody", "rpy", "omegaBody", "omegaWorld", "quat", "contact_estimate", "aBody",
-                 "aWorld", "timestamp_us", "id", "robot_id"]
-
-    __typenames__ = ["float", "float", "float", "float", "float", "float", "float", "float", "float", "float",
-                     "int64_t", "int64_t", "int64_t"]
-
-    __dimensions__ = [[3], [3], [3], [3], [3], [3], [4], [4], [3], [3], None, None, None]
+    __slots__ = ["p", "vWorld", "vBody", "rpy", "omegaBody", "omegaWorld", "quat", "contact_estimate", "aBody", "aWorld", "timestamp_us", "id", "robot_id"]
 
     def __init__(self):
-        self.p = [0.0 for dim0 in range(3)]
-        self.vWorld = [0.0 for dim0 in range(3)]
-        self.vBody = [0.0 for dim0 in range(3)]
-        self.rpy = [0.0 for dim0 in range(3)]
-        self.omegaBody = [0.0 for dim0 in range(3)]
-        self.omegaWorld = [0.0 for dim0 in range(3)]
-        self.quat = [0.0 for dim0 in range(4)]
-        self.contact_estimate = [0.0 for dim0 in range(4)]
-        self.aBody = [0.0 for dim0 in range(3)]
-        self.aWorld = [0.0 for dim0 in range(3)]
+        self.p = [ 0.0 for dim0 in range(3) ]
+        self.vWorld = [ 0.0 for dim0 in range(3) ]
+        self.vBody = [ 0.0 for dim0 in range(3) ]
+        self.rpy = [ 0.0 for dim0 in range(3) ]
+        self.omegaBody = [ 0.0 for dim0 in range(3) ]
+        self.omegaWorld = [ 0.0 for dim0 in range(3) ]
+        self.quat = [ 0.0 for dim0 in range(4) ]
+        self.contact_estimate = [ 0.0 for dim0 in range(4) ]
+        self.aBody = [ 0.0 for dim0 in range(3) ]
+        self.aWorld = [ 0.0 for dim0 in range(3) ]
         self.timestamp_us = 0
         self.id = 0
         self.robot_id = 0
@@ -61,7 +54,6 @@ class state_estimator_lcmt(object):
         if buf.read(8) != state_estimator_lcmt._get_packed_fingerprint():
             raise ValueError("Decode error")
         return state_estimator_lcmt._decode_one(buf)
-
     decode = staticmethod(decode)
 
     def _decode_one(buf):
@@ -78,15 +70,14 @@ class state_estimator_lcmt(object):
         self.aWorld = struct.unpack('>3f', buf.read(12))
         self.timestamp_us, self.id, self.robot_id = struct.unpack(">qqq", buf.read(24))
         return self
-
     _decode_one = staticmethod(_decode_one)
 
+    _hash = None
     def _get_hash_recursive(parents):
         if state_estimator_lcmt in parents: return 0
         tmphash = (0xea87c8282effe5b6) & 0xffffffffffffffff
-        tmphash = (((tmphash << 1) & 0xffffffffffffffff) + (tmphash >> 63)) & 0xffffffffffffffff
+        tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
-
     _get_hash_recursive = staticmethod(_get_hash_recursive)
     _packed_fingerprint = None
 
@@ -94,9 +85,5 @@ class state_estimator_lcmt(object):
         if state_estimator_lcmt._packed_fingerprint is None:
             state_estimator_lcmt._packed_fingerprint = struct.pack(">Q", state_estimator_lcmt._get_hash_recursive([]))
         return state_estimator_lcmt._packed_fingerprint
-
     _get_packed_fingerprint = staticmethod(_get_packed_fingerprint)
 
-    def get_hash(self):
-        """Get the LCM hash of the struct"""
-        return struct.unpack(">Q", state_estimator_lcmt._get_packed_fingerprint())[0]

@@ -9,4 +9,6 @@ struct pd_tau_targets_lcmt
     int64_t id;
     int64_t robot_id;
     double se_contactState[4];
+    double q_arm_des[7];
+    int64_t stop_flag;
 }

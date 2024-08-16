@@ -58,6 +58,7 @@ class TrackingTester:
         self.lpy_threshold = 0.03  # m
         self.rpy_threshold = torch.pi / 18. / 2.  # rad
         self.rpy_threshold = torch.pi / 18.  # rad
+        self.rpy_threshold = 1.  # rad
         angle75 = torch.deg2rad(torch.tensor(75))
         self.mode = mode
         self.force_range = [10., 20.]
@@ -206,7 +207,7 @@ class TrackingTester:
 
         def policy(obs, info={}):
             latent = adaptation_module.forward(obs["obs_history"].to(self.device))
-            action = body.forward(torch.cat((obs["obs_history"].to(self.device), latent), dim=-1))
+            action = body.forward(torch.cat((obs["obs"].to(self.device), latent), dim=-1))
             info['latent'] = latent
             return action
         
@@ -508,7 +509,8 @@ if __name__ == "__main__":
     ckpt_folder = "/home/pgp/agile/hybrid_improve_dwb/runs/ckpts/"+args.algo+"/"+args.seed
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/download/go1_torque_0704"
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765"
-    args.ckpt_number = "054000"
+    ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/adapt_dofx10/2024-08-09/auto_train/155105.439947_seed9913"
+    args.ckpt_number = "080000"
     runner = TrackingTester(
         vel = args.vel,
         num_envs = args.num_envs,
