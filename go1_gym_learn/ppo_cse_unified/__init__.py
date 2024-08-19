@@ -52,6 +52,7 @@ class UnifiedRunnerArgs(PrefixProto, cli=False):
     save_interval = 400  # check for potential saves every this many iterations
     save_video_interval = 400
     log_freq = 10
+    log_video = False
 
     # load and resume
     load_run = -1  # -1 = last run
@@ -298,7 +299,7 @@ class Runner:
                             f"""{'ETA:':>{pad}} {mins:.0f} mins {secs:.1f} s\n""")
                 print(log_string)
                 
-            if UnifiedRunnerArgs.save_video_interval:
+            if UnifiedRunnerArgs.save_video_interval and UnifiedRunnerArgs.log_video:
                 self.log_video(it)
 
             if not self.debug and it % UnifiedRunnerArgs.save_interval == 0:
