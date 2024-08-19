@@ -1725,7 +1725,7 @@ class LeggedRobot(BaseTask):
                                                                                       self.actor_handles[0],
                                                                                       penalized_contact_names[i])
 
-        self.termination_contact_indices = torch.zeros(lrecord_videoen(termination_contact_names), dtype=torch.long,
+        self.termination_contact_indices = torch.zeros(len(termination_contact_names), dtype=torch.long,
                                                        device=self.device, requires_grad=False)
         for i in range(len(termination_contact_names)):
             self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(self.envs[0],
@@ -1777,7 +1777,6 @@ class LeggedRobot(BaseTask):
         return img.reshape([w, h // 4, 4])
 
     def _render_headless(self):
-        import ipdb; ipdb.set_trace()
         # TODO 将当前的迭代次数和stage信息显示在视频中央
         if self.record_now and self.complete_video_frames is not None and len(self.complete_video_frames) == 0:
             bx, by, bz = self.root_states[0, 0], self.root_states[0, 1], self.root_states[0, 2]
