@@ -284,10 +284,14 @@ class Runner:
                 dog_action_std = self.alg_dog.actor_critic.std.clone()            
                 if not self.debug:
                     # wandb_dict["Train_Loss/adaptation_loss"] = mean_adaptation_module_loss
-                    wandb_dict["Train_Loss/mean_value_loss"] = mean_value_loss_arm
-                    wandb_dict["Train_Loss/mean_surrogate_loss"] = mean_surrogate_loss_arm
+                    wandb_dict["Train_Loss/mean_value_loss_arm"] = mean_value_loss_arm
+                    wandb_dict["Train_Loss/mean_surrogate_loss_arm"] = mean_surrogate_loss_arm
+                    wandb_dict["Train_Loss/mean_adaptation_module_loss_arm"] = mean_adaptation_module_loss_arm
+                    
                     wandb_dict["Train_Loss/mean_value_loss_dog"] = mean_value_loss_dog
                     wandb_dict["Train_Loss/mean_surrogate_loss_dog"] = mean_surrogate_loss_dog
+                    wandb_dict["Train_Loss/mean_adaptation_module_loss_dog"] = mean_adaptation_module_loss_dog
+
                     wandb_dict["Train_std/arm_action_std"] = arm_action_std.mean()
                     wandb_dict["Train_std/dog_action_std"] = dog_action_std.mean()
                     
@@ -375,6 +379,11 @@ class Runner:
         body_model_dog = copy.deepcopy(self.alg_dog.actor_critic.actor_body).to('cpu')
         traced_script_body_module_dog = torch.jit.script(body_model_dog)
         traced_script_body_module_dog.save(body_dog_path)
+        history_dog_path = f'{path}/history_latest_dog.jit'
+        history_model_dog = copy.deepcopy(self.alg_dog.actor_critic.actor_history_encoder).to('cpu')
+        traced_script_history_module_dog = torch.jit.script(history_model_dog)
+        traced_script_history_module_dog.save(history_dog_path)
+
 
         # save to wandb
         wandb.save(adaptation_module_dog_path)
@@ -399,7 +408,12 @@ class Runner:
         body_model = copy.deepcopy(self.alg_arm.actor_critic.actor_body).to('cpu')
         traced_script_body_module = torch.jit.script(body_model)
         traced_script_body_module.save(body_path)
-
+        history_arm_path = f'{path}/history_latest_arm.jit'
+        history_model_arm = copy.deepcopy(self.alg_arm.actor_critic.actor_history_encoder).to('cpu')
+        traced_script_history_module_arm = torch.jit.script(history_model_arm)
+        traced_script_history_module_arm.save(history_arm_path)
+        
+        
         # save to wandb
         wandb.save(adaptation_module_path)
         wandb.save(body_path)

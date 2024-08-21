@@ -19,7 +19,7 @@ from isaacgym import gymapi
 from pynput import keyboard
 import threading
 
-ckpt_id = '065600'
+ckpt_id = 'last'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
@@ -49,6 +49,10 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-12/auto_train/1402
 logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-17/auto_train/231540.015171_seed3302"
+
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
