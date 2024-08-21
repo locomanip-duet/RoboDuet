@@ -71,10 +71,11 @@ class LeggedRobot(BaseTask):
 
         self.arm_time_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
         self.force_time_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
-        self.gym.subscribe_viewer_keyboard_event(
-            self.viewer, gymapi.KEY_F, "fixed_cam")
-        self.gym.subscribe_viewer_keyboard_event(
-            self.viewer, gymapi.KEY_S, "save_image")
+        if not self.headless:
+            self.gym.subscribe_viewer_keyboard_event(
+                self.viewer, gymapi.KEY_F, "fixed_cam")
+            self.gym.subscribe_viewer_keyboard_event(
+                self.viewer, gymapi.KEY_S, "save_image")
 
     def render_gui(self, sync_frame_time=True):
         if self.viewer:
@@ -255,7 +256,8 @@ class LeggedRobot(BaseTask):
         self.prev_base_quat = self.base_quat.clone()
         self.prev_base_lin_vel = self.base_lin_vel.clone()
         self.prev_foot_velocities = self.foot_velocities.clone()
-        self.render_gui()
+        if not self.headless:
+            self.render_gui()
         for _ in range(self.cfg.control.decimation):
             self.add_continue_force()
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
@@ -338,7 +340,7 @@ class LeggedRobot(BaseTask):
         self.last_dof_vel[:] = self.dof_vel[:]
         self.last_root_vel[:] = self.root_states[:, 7:13]
 
-        if self.viewer and self.enable_viewer_sync and self.debug_viz:
+        if not self.headless and self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
 
         self._render_headless()
