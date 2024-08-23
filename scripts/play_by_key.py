@@ -50,6 +50,7 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235
 logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-17/auto_train/231540.015171_seed3302"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-21/auto_train/085928.815714_seed1115"
 
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
@@ -271,11 +272,12 @@ def load_arm_policy(logdir, Cfg):
     actor_critic.eval()
     adaptation_module = actor_critic.adaptation_module
     body = actor_critic.actor_body
+    actor_his = actor_critic.actor_history_encoder
     
     def policy(obs, info={}):
-        i = 0
+        hist = actor_his.forward(obs["obs_history"].to('cpu')[..., :-Cfg.arm.arm_num_observations])
         latent = adaptation_module.forward(obs["obs_history"].to('cpu'))
-        action = body.forward(torch.cat((obs["obs"].to('cpu'), latent), dim=-1))
+        action = body.forward(torch.cat((obs["obs"].to('cpu'), latent, hist), dim=-1))
         info['latent'] = latent
         return action
 

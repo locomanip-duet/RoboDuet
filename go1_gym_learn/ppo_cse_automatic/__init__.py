@@ -380,10 +380,10 @@ class Runner:
         body_model_dog = copy.deepcopy(self.alg_dog.actor_critic.actor_body).to('cpu')
         traced_script_body_module_dog = torch.jit.script(body_model_dog)
         traced_script_body_module_dog.save(body_dog_path)
-        history_dog_path = f'{path}/history_latest_dog.jit'
-        history_model_dog = copy.deepcopy(self.alg_dog.actor_critic.actor_history_encoder).to('cpu')
-        traced_script_history_module_dog = torch.jit.script(history_model_dog)
-        traced_script_history_module_dog.save(history_dog_path)
+        # history_dog_path = f'{path}/history_latest_dog.jit'
+        # history_model_dog = copy.deepcopy(self.alg_dog.actor_critic.actor_history_encoder).to('cpu')
+        # traced_script_history_module_dog = torch.jit.script(history_model_dog)
+        # traced_script_history_module_dog.save(history_dog_path)
 
 
         # save to wandb
