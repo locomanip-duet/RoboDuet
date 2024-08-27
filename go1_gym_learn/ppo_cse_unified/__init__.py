@@ -86,6 +86,7 @@ class Runner:
         self.num_steps_per_env = UnifiedRunnerArgs.num_steps_per_env
         
         self.unified_model = Unified2ActorCritic(
+            self.env.cfg.env.num_observations,
             self.env.cfg.env.num_privileged_obs,
             self.env.cfg.env.num_obs_history,
             self.env.cfg.env.num_actions,

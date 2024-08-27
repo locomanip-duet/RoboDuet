@@ -5,10 +5,10 @@ import torch.nn as nn
 from params_proto import PrefixProto
 from torch.distributions import Normal
 
-
 class Unified2AC_Args(PrefixProto, cli=False):
     # policy
-    init_noise_std = 1.0
+    dog_init_noise_std = 1.0
+    arm_init_noise_std = 0.1
     actor_hidden_dims = [512 * 2, 256 * 2, 128 * 2]
     critic_hidden_dims = [512 * 2, 256 * 2, 128 * 2]
     activation = 'elu'  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
@@ -24,6 +24,7 @@ class Unified2ActorCritic(nn.Module):
     is_recurrent = False
 
     def __init__(self,
+                 num_obs,
                  num_privileged_obs,
                  num_obs_history,
                  num_actions,
@@ -34,6 +35,7 @@ class Unified2ActorCritic(nn.Module):
         self.decoder = Unified2AC_Args.use_decoder
         super().__init__()
 
+        self.num_obs = num_obs
         self.num_obs_history = num_obs_history
         self.num_privileged_obs = num_privileged_obs
 
@@ -54,11 +56,9 @@ class Unified2ActorCritic(nn.Module):
                 adaptation_module_layers.append(activation)
         self.adaptation_module = nn.Sequential(*adaptation_module_layers)
 
-
-
         # Policy
         actor_layers = []
-        actor_layers.append(nn.Linear(self.num_privileged_obs + self.num_obs_history, Unified2AC_Args.actor_hidden_dims[0]))
+        actor_layers.append(nn.Linear(self.num_privileged_obs + self.num_obs, Unified2AC_Args.actor_hidden_dims[0]))
         actor_layers.append(activation)
         for l in range(len(Unified2AC_Args.actor_hidden_dims)):
             if l == len(Unified2AC_Args.actor_hidden_dims) - 1:
@@ -69,9 +69,18 @@ class Unified2ActorCritic(nn.Module):
                 actor_layers.append(activation)
         self.actor_body = nn.Sequential(*actor_layers)
 
+
+        self.history_encoder = nn.Sequential(
+            nn.Linear(self.num_obs_history - self.num_obs, Unified2AC_Args.critic_hidden_dims[0]),
+            activation,
+            nn.Linear(Unified2AC_Args.critic_hidden_dims[0], Unified2AC_Args.critic_hidden_dims[1]),
+            activation,
+            nn.Linear(Unified2AC_Args.critic_hidden_dims[1], Unified2AC_Args.critic_hidden_dims[2]),
+        )
+
         # Value function
         critic_layers = []
-        critic_layers.append(nn.Linear(self.num_privileged_obs + self.num_obs_history, Unified2AC_Args.critic_hidden_dims[0]))
+        critic_layers.append(nn.Linear(self.num_obs + self.num_privileged_obs + Unified2AC_Args.critic_hidden_dims[2], Unified2AC_Args.critic_hidden_dims[0]))
         critic_layers.append(activation)
         for l in range(len(Unified2AC_Args.critic_hidden_dims)):
             if l == len(Unified2AC_Args.critic_hidden_dims) - 1:
@@ -83,7 +92,7 @@ class Unified2ActorCritic(nn.Module):
         
         # construct another same critic for arm
         critic_layers_arm = []
-        critic_layers_arm.append(nn.Linear(self.num_privileged_obs + self.num_obs_history, Unified2AC_Args.critic_hidden_dims[0]))
+        critic_layers_arm.append(nn.Linear(self.num_obs + self.num_privileged_obs + Unified2AC_Args.critic_hidden_dims[2], Unified2AC_Args.critic_hidden_dims[0]))
         critic_layers_arm.append(activation)
         for l in range(len(Unified2AC_Args.critic_hidden_dims)):
             if l == len(Unified2AC_Args.critic_hidden_dims) - 1:
@@ -99,8 +108,9 @@ class Unified2ActorCritic(nn.Module):
         print(f"Dog Critic MLP: {self.critic_body}")
 
         # Action noise
-        self.std_dog = nn.Parameter(Unified2AC_Args.init_noise_std * torch.ones(Unified2AC_Args.num_actions_loco))
-        self.std_arm = torch.ones(Unified2AC_Args.num_actions_arm, device=kwargs['device']) * Unified2AC_Args.init_noise_std
+        self.std_dog = nn.Parameter(Unified2AC_Args.dog_init_noise_std * torch.ones(Unified2AC_Args.num_actions_loco))
+        # self.std_arm = torch.ones(Unified2AC_Args.num_actions_arm, device=kwargs['device']) * Unified2AC_Args.init_noise_std
+        self.std_arm = nn.Parameter(Unified2AC_Args.arm_init_noise_std * torch.ones(Unified2AC_Args.num_actions_arm))
         self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
@@ -136,8 +146,9 @@ class Unified2ActorCritic(nn.Module):
         return self.distribution.entropy()[:, :Unified2AC_Args.num_actions_loco].sum(dim=-1), self.distribution.entropy()[:, Unified2AC_Args.num_actions_loco:].sum(dim=-1)
     
     def update_distribution(self, observation_history):
+        obs = observation_history[..., -self.num_obs:]
         latent = self.adaptation_module(observation_history)
-        hidden = self.actor_body(torch.cat((observation_history, latent), dim=-1))
+        hidden = self.actor_body(torch.cat((obs, latent), dim=-1))
         mean_dog = self.action_dog_head(hidden)
         mean_arm = self.action_arm_head(hidden)
 
@@ -178,9 +189,12 @@ class Unified2ActorCritic(nn.Module):
         return actions_mean
 
     def evaluate(self, observation_history, privileged_observations, **kwargs):
+        obs = observation_history[..., -self.num_obs:]
+        obs_h = observation_history[..., :-self.num_obs]
+        h_latent = self.history_encoder(obs_h)
         # latent = self.env_factor_encoder(privileged_observations)
-        value = self.critic_body(torch.cat((observation_history, privileged_observations), dim=-1))
-        value_arm = self.critic_body_arm(torch.cat((observation_history, privileged_observations), dim=-1))
+        value = self.critic_body(torch.cat((obs, privileged_observations, h_latent), dim=-1))
+        value_arm = self.critic_body_arm(torch.cat((obs, privileged_observations, h_latent), dim=-1))
         return torch.cat([value, value_arm], dim=-1)
 
     def get_student_latent(self, observation_history):

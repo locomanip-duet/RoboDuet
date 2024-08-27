@@ -25,7 +25,6 @@ from go1_gym_learn.ppo_cse_unified.ppo import UnifiedPPO_Args
 from go1_gym_learn.ppo_cse_unified import UnifiedRunnerArgs
 from go1_gym_learn.ppo_cse_unified.unified2head_ac import Unified2AC_Args
 
-
 from go1_gym.utils import format_code, set_seed, global_switch
 
 def unified_reward_scales_wrapper(self):
@@ -62,7 +61,8 @@ def train_go1(headless=True):
     Cfg.commands.distributional_commands = False
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = False
-    Cfg.control.control_type = "P"
+    
+    Cfg.control.control_type = "M"
     if Cfg.control.control_type == "P":
         Cfg.arm.control.stiffness_arm = {'joint': 5., 'widow': 5., "zarx": 5., "zarx_j3": 20}  # [N*m/rad]
         Cfg.arm.control.damping_arm = {'joint': 1, 'widow': 1, "zarx": 1., "zarx_j3": 2}  # [N*m*s/rad]
@@ -86,9 +86,10 @@ def train_go1(headless=True):
     Cfg.env.num_observations = 63
     Cfg.env.num_obs_history = Cfg.env.num_observation_history * Cfg.env.num_observations
     
-    Cfg.hybrid.reward_scales.tracking_lin_vel = 0.5 * Cfg.reward_scales.tracking_lin_vel
+    Cfg.hybrid.reward_scales.tracking_lin_vel = 0.7 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
-    Cfg.reward_scales.arm_energy = -0.00004
+    Cfg.hybrid.reward_scales.guide = -2.0
+    Cfg.hybrid.reward_scales.arm_energy = -0.00004
     Cfg.reward_scales.loco_energy = -0.00004
 
     Cfg.reward_scales.jump = -0.00
@@ -100,7 +101,6 @@ def train_go1(headless=True):
         global_switch.pretrained_to_hybrid_start = 0
 
     global_switch.pretrained_to_hybrid_end = global_switch.pretrained_to_hybrid_start + 0
-
 
     if args.debug:
         if global_switch.pretrained_to_hybrid_start > 0:
@@ -119,20 +119,30 @@ def train_go1(headless=True):
     Cfg.commands.global_reference = False
     Cfg.env.priv_observe_high_freq_goal = False
     Cfg.env.num_privileged_obs = 9
-
-    Cfg.hybrid.reward_scales.arm_control_smoothness_1 = -0.
-    Cfg.hybrid.reward_scales.arm_control_limits = -0.
-    Cfg.reward_scales.orientation_control = -0.
-            
-    # global_switch.get_reward_scales = unified_reward_scales_wrapper(global_switch)
     
-    Cfg.asset.render_sphere = True # NOTE no use in headless 
+    Cfg.asset.render_sphere = True # NOTE no use in headless
+    Cfg.hybrid.use_vision = False
+    Cfg.rewards.manip_weight_lpy = 3
+    Cfg.rewards.manip_weight_rpy = 1
+    Cfg.hybrid.reward_scales.arm_dof_vel = 10 * Cfg.reward_scales.dof_vel
+    Cfg.hybrid.reward_scales.arm_dof_acc = 10 * Cfg.reward_scales.dof_acc
+    Cfg.hybrid.reward_scales.arm_action_rate = 10 * Cfg.reward_scales.action_rate
+    # Cfg.hybrid.reward_scales.dof_vel = 10 * Cfg.reward_scales.dof_vel
+    # Cfg.hybrid.reward_scales.dof_acc = 10 * Cfg.reward_scales.dof_acc
+    # Cfg.hybrid.reward_scales.action_rate = 10 * Cfg.reward_scales.action_rate
+    
     global_switch.init_sigmoid_lr()
+    # global_switch.init_linear_lr()
+    
+    if args.robot == "go1":
+        Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
+    elif args.robot == "go2":
+        Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2.urdf'
     
     now = datetime.now()
     stem = Path(__file__).stem
     wandb.init(entity="RoboDuet",
-               project="ablation",
+               project="ablation3",
                group=args.run_name,
                mode=mode,
                notes=args.notes,
@@ -153,7 +163,6 @@ def train_go1(headless=True):
         # >>> # wandb.run.name
         # >>> 2023-12-31/train_ppo/021707.917935
         run_log_dir = osp.join(wandb.run.dir, wandb.run.name)
-
 
         #  for example: /home/pi7113t/dog/dwb-wtw/runs/wo_any_random/2023-12-31/train_ppo/021707.917935
         os.makedirs(osp.join(args.log_dir, "checkpoints_unified"), exist_ok=True)
@@ -218,15 +227,12 @@ def train_go1(headless=True):
             "Global_Switch/end": global_switch.pretrained_to_hybrid_end,
             }, step=0)
 
-
     env = VelocityTrackingEasyEnv(sim_device=args.sim_device, headless=args.headless, cfg=Cfg)
     env = HistoryWrapper(env)
 
     gpu_id = args.sim_device.split(":")[-1]
     runner = Runner(env, device=f"cuda:{gpu_id}", run_name=args.run_name, resume=args.resume, log_dir=args.log_dir, debug=args.debug)
     runner.learn(num_learning_iterations=args.num_learning_iterations, init_at_random_ep_len=True, eval_freq=args.eval_freq)
-
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Go1")
@@ -243,6 +249,7 @@ if __name__ == '__main__':
     parser.add_argument('--tags', nargs='+', default=[])
     parser.add_argument('--notes', type=str, default=None)
     parser.add_argument('--seed', type=int, default=-1)
+    parser.add_argument('--robot', type=str, default="go1", choices=["go1", "go2"])
     parser.add_argument('--wo_two_stage', action='store_true', default=False)
 
     args = parser.parse_args()
