@@ -17,7 +17,7 @@ def config_asset(Cnfg: Union[Cfg, Meta]):
         "gripper", "thigh", "calf",
         "Head"
         ]
-    Cnfg.asset.terminate_after_contacts_on = ['zarx']
+    Cnfg.asset.terminate_after_contacts_on = ['zarx_body5', 'zarx_body6', 'zarx_body7', 'zarx_body8']
     
     Cnfg.asset.hip_joints = {'hip'}
     

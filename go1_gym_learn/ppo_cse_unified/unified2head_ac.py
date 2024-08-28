@@ -151,11 +151,14 @@ class Unified2ActorCritic(nn.Module):
         hidden = self.actor_body(torch.cat((obs, latent), dim=-1))
         mean_dog = self.action_dog_head(hidden)
         mean_arm = self.action_arm_head(hidden)
-
-        self.distribution = Normal(torch.cat([mean_dog, mean_arm], dim=-1),
+        try:
+            self.distribution = Normal(torch.cat([mean_dog, mean_arm], dim=-1),
                                    torch.cat([mean_dog, mean_arm], dim=-1) * 0.
                                         + torch.concat([self.std_dog, self.std_arm], dim=-1))
-        
+        except Exception as e:
+            print(f"An exception occurred: {str(e)}")
+            import ipdb; ipdb.set_trace()
+            pass
         
     def act(self, observation_history, **kwargs):
         self.update_distribution(observation_history)
