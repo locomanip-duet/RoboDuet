@@ -26,6 +26,7 @@ from go1_gym_learn.ppo_cse_unified import UnifiedRunnerArgs
 from go1_gym_learn.ppo_cse_unified.unified2head_ac import Unified2AC_Args
 
 from go1_gym.utils import format_code, set_seed, global_switch
+os.environ["WANDB_SILENT"] = "true"
 
 def unified_reward_scales_wrapper(self):
     def get_reward_scales():
@@ -142,7 +143,7 @@ def train_go1(headless=True):
     now = datetime.now()
     stem = Path(__file__).stem
     wandb.init(entity="RoboDuet",
-               project="ablation3",
+               project="dev2",
                group=args.run_name,
                mode=mode,
                notes=args.notes,

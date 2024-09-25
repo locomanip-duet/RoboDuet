@@ -200,28 +200,29 @@ class PPO:
             
             
             # Adaptation module gradient step
-            for epoch in range(UnifiedPPO_Args.num_adaptation_module_substeps):
-                adaptation_pred = self.actor_critic.adaptation_module(obs_history_batch)
-                with torch.no_grad():
-                    adaptation_target = privileged_obs_batch
-                    # residual = (adaptation_target - adaptation_pred).norm(dim=1)
-                    # caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
-                    #                       sysid_residual=residual.cpu().numpy())
+            if global_switch.switch_open:
+                for epoch in range(UnifiedPPO_Args.num_adaptation_module_substeps):
+                    adaptation_pred = self.actor_critic.adaptation_module(obs_history_batch)
+                    with torch.no_grad():
+                        adaptation_target = privileged_obs_batch
+                        # residual = (adaptation_target - adaptation_pred).norm(dim=1)
+                        # caches.slot_cache.log(env_bins_batch[:, 0].cpu().numpy().astype(np.uint8),
+                        #                       sysid_residual=residual.cpu().numpy())
 
-                selection_indices = torch.linspace(0, adaptation_pred.shape[1]-1, steps=adaptation_pred.shape[1], dtype=torch.long)
-                if UnifiedPPO_Args.selective_adaptation_module_loss:
-                    # mask out indices corresponding to swing feet
-                    selection_indices = 0
+                    selection_indices = torch.linspace(0, adaptation_pred.shape[1]-1, steps=adaptation_pred.shape[1], dtype=torch.long)
+                    if UnifiedPPO_Args.selective_adaptation_module_loss:
+                        # mask out indices corresponding to swing feet
+                        selection_indices = 0
 
-                adaptation_loss = F.mse_loss(adaptation_pred[:num_train, selection_indices], adaptation_target[:num_train, selection_indices])
-                adaptation_test_loss = F.mse_loss(adaptation_pred[num_train:, selection_indices], adaptation_target[num_train:, selection_indices])
+                    adaptation_loss = F.mse_loss(adaptation_pred[:num_train, selection_indices], adaptation_target[:num_train, selection_indices])
+                    adaptation_test_loss = F.mse_loss(adaptation_pred[num_train:, selection_indices], adaptation_target[num_train:, selection_indices])
 
-                self.adaptation_module_optimizer.zero_grad()
-                adaptation_loss.backward()
-                self.adaptation_module_optimizer.step()
+                    self.adaptation_module_optimizer.zero_grad()
+                    adaptation_loss.backward()
+                    self.adaptation_module_optimizer.step()
 
-                mean_adaptation_module_loss += adaptation_loss.item()
-                mean_adaptation_module_test_loss += adaptation_test_loss.item()
+                    mean_adaptation_module_loss += adaptation_loss.item()
+                    mean_adaptation_module_test_loss += adaptation_test_loss.item()
 
         num_updates = UnifiedPPO_Args.num_learning_epochs * UnifiedPPO_Args.num_mini_batches
         mean_value_loss_dog /= num_updates

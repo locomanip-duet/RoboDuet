@@ -202,6 +202,7 @@ def load_env(logdir, headless=False):
     Cfg.arm.commands.T_traj = [20000, 30000]
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2_origin.urdf'
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
+    Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2.urdf'
     
     # Cfg.env.num_observations = 65
     # Cfg.env.num_privileged_obs = 33

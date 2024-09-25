@@ -349,6 +349,9 @@ class Runner:
                             f"""{'ETA:':>{pad}} {mins:.0f} mins {secs:.1f} s\n""")
                 print(log_string)
                 
+                with open(osp.join(self.log_dir, "log.txt"), "a") as f:
+                    f.write(log_string)
+                
             if RunnerArgs.save_video_interval and RunnerArgs.log_video:
                 self.log_video(it)
 

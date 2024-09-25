@@ -244,8 +244,8 @@ class Runner:
                 arm_action_std = self.alg.actor_critic.std_arm.clone()
                 if not self.debug:
                     # wandb_dict["Train_Loss/adaptation_loss"] = mean_adaptation_module_loss
-                    wandb_dict["Train_Loss/mean_value_loss"] = mean_value_loss_arm
-                    wandb_dict["Train_Loss/mean_surrogate_loss"] = mean_surrogate_loss_arm
+                    wandb_dict["Train_Loss/mean_value_loss_arm"] = mean_value_loss_arm
+                    wandb_dict["Train_Loss/mean_surrogate_loss_arm"] = mean_surrogate_loss_arm
                     wandb_dict["Train_Loss/mean_value_loss_dog"] = mean_value_loss_dog
                     wandb_dict["Train_Loss/mean_surrogate_loss_dog"] = mean_surrogate_loss_dog
                     wandb_dict["Train_std/arm_action_std"] = arm_action_std.mean()
@@ -299,6 +299,9 @@ class Runner:
                             f"""{'Total time:':>{pad}} {self.tot_time:.2f}s\n"""
                             f"""{'ETA:':>{pad}} {mins:.0f} mins {secs:.1f} s\n""")
                 print(log_string)
+                
+                with open(osp.join(self.log_dir, "log.txt"), "a") as f:
+                    f.write(log_string)
                 
             if UnifiedRunnerArgs.save_video_interval and UnifiedRunnerArgs.log_video:
                 self.log_video(it)

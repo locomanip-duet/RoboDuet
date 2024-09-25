@@ -28,6 +28,7 @@ from go1_gym_learn.ppo_cse_automatic.arm_ac import ArmAC_Args
 
 
 from go1_gym.utils import format_code, set_seed, global_switch
+os.environ["WANDB_SILENT"] = "true"
 
 def train_go1(arg):
     
@@ -146,7 +147,7 @@ def train_go1(arg):
     now = datetime.now()
     stem = Path(__file__).stem
     wandb.init(entity="RoboDuet",
-               project="deploy",
+               project="dev2",
                group=args.run_name,
                mode=mode,
                notes=args.notes,
