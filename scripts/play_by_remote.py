@@ -21,7 +21,7 @@ import threading
 from go1_gym_deploy.lcm_types.arm_actions_t import arm_actions_t
 import math
 
-ckpt_id = '16000'
+ckpt_id = '35200'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
@@ -61,6 +61,7 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':

@@ -19,7 +19,8 @@ from isaacgym import gymapi
 from pynput import keyboard
 import threading
 
-ckpt_id = '16000'
+ckpt_id = '35200'
+
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
@@ -58,7 +59,9 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/1
 logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369149_seed2423"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_noguide/2024-09-29/auto_train/181604.885903_seed8765"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -73,8 +76,8 @@ roll_cmd, pitch_cmd, yaw_cmd = 0.1, 0.5, 0
 
 
 # 0.8 0.9288397789009097 1.5707963267948966 0.08288302744708458 1.5576644087828007 0.8455169200897186
-l_cmd, p_cmd, y_cmd = 0.8, 0.9288397789009097, 1.5707963267948966
-roll_cmd, pitch_cmd, yaw_cmd = 0.08288302744708458, 1.5576644087828007, 0.8455169200897186
+# l_cmd, p_cmd, y_cmd = 0.8, 0.9288397789009097, 1.5707963267948966
+# roll_cmd, pitch_cmd, yaw_cmd = 0.08288302744708458, 1.5576644087828007, 0.8455169200897186
 roll_cmd, pitch_cmd, yaw_cmd = 0, 0, 0
 
 
@@ -123,17 +126,17 @@ def play_go1(headless=True):
 
         ret = env.step(actions_dog, actions_arm[...,:-2], )
 
-        env.commands_dog[:, 0] = x_vel_cmd
-        env.commands_dog[:, 1] = y_vel_cmd
-        env.commands_dog[:, 2] = yaw_vel_cmd
+        # env.commands_dog[:, 0] = x_vel_cmd
+        # env.commands_dog[:, 1] = y_vel_cmd
+        # env.commands_dog[:, 2] = yaw_vel_cmd
         # env.commands_dog[:, 10] = -0.4
         # env.commands_dog[:, 11] = 0
-        env.commands_arm[:, 0] = l_cmd
-        env.commands_arm[:, 1] = p_cmd
-        env.commands_arm[:, 2] = y_cmd
-        env.commands_arm[:, 3] = roll_cmd
-        env.commands_arm[:, 4] = pitch_cmd
-        env.commands_arm[:, 5] = yaw_cmd
+        # env.commands_arm[:, 0] = l_cmd
+        # env.commands_arm[:, 1] = p_cmd
+        # env.commands_arm[:, 2] = y_cmd
+        # env.commands_arm[:, 3] = roll_cmd
+        # env.commands_arm[:, 4] = pitch_cmd
+        # env.commands_arm[:, 5] = yaw_cmd
 
         if control_type == 'random':
             if i % 100 == 0:

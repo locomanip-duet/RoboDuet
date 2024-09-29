@@ -132,6 +132,9 @@ def train_go1(headless=True):
     # Cfg.hybrid.reward_scales.dof_acc = 10 * Cfg.reward_scales.dof_acc
     # Cfg.hybrid.reward_scales.action_rate = 10 * Cfg.reward_scales.action_rate
     
+    if args.headless:
+        UnifiedRunnerArgs.log_video = False
+    
     global_switch.init_sigmoid_lr()
     # global_switch.init_linear_lr()
     

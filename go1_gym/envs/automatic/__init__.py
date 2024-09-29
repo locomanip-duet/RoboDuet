@@ -447,8 +447,10 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
                     self.commands_dog[0, 0] -= 0.1
                 elif evt.action == 'move left' and evt.value > 0:
                     self.commands_dog[0, 1] += 0.1
+                    self.commands_dog[0, 1] = torch.clip(self.commands_dog[0, 1], -0.5, 0.5)
                 elif evt.action == 'move right' and evt.value > 0:
                     self.commands_dog[0, 1] -= 0.1
+                    self.commands_dog[0, 1] = torch.clip(self.commands_dog[0, 1], -0.5, 0.5)
                 elif evt.action == 'turn left' and evt.value > 0:
                     self.commands_dog[0, 2] += 0.1
                 elif evt.action == 'turn right' and evt.value > 0:

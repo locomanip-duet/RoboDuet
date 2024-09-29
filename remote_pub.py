@@ -14,7 +14,7 @@ from go1_gym_deploy.lcm_types.arm_actions_t import arm_actions_t
  
 # NOTE：此IP:PORT 为 VR 端串流主机用于发送消息的端口
 # 在 jetson 上的订阅ip/pull ip 也设置成这个主机的 ip+port
-GLOBAL_IP = "192.168.1.134"
+GLOBAL_IP = "192.168.1.124"
 GLOBAL_PORT = "34565"
  
 

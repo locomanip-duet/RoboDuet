@@ -85,7 +85,8 @@ def train_go1(arg):
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.7 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
-    # Cfg.hybrid.reward_scales.guide = -2.0
+    if args.guide:
+        Cfg.hybrid.reward_scales.guide = -2.0
     Cfg.hybrid.reward_scales.arm_energy = -0.00004
     Cfg.reward_scales.loco_energy = -0.00004
 
@@ -132,7 +133,7 @@ def train_go1(arg):
     Cfg.hybrid.reward_scales.arm_dof_vel = 10 * Cfg.reward_scales.dof_vel
     Cfg.hybrid.reward_scales.arm_dof_acc = 10 * Cfg.reward_scales.dof_acc
     Cfg.hybrid.reward_scales.arm_action_rate = 10 * Cfg.reward_scales.action_rate
-    Cfg.domain_rand.gravity_range = [-4.0, 4.0]
+    # Cfg.domain_rand.gravity_range = [-4.0, 4.0]
     # Cfg.hybrid.reward_scales.dof_vel = 10 * Cfg.reward_scales.dof_vel
     # Cfg.hybrid.reward_scales.dof_acc = 10 * Cfg.reward_scales.dof_acc
     # Cfg.hybrid.reward_scales.action_rate = 10 * Cfg.reward_scales.action_rate
@@ -144,6 +145,10 @@ def train_go1(arg):
         Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
     elif args.robot == "go2":
         Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2.urdf'
+    
+    if args.headless:
+        RunnerArgs.log_video = False
+    
     
     now = datetime.now()
     stem = Path(__file__).stem
@@ -260,6 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=-1)
     parser.add_argument('--robot', type=str, default="go1", choices=["go1", "go2"])
     parser.add_argument('--wo_two_stage', action='store_true', default=False)
+    parser.add_argument('--guide', action='store_true', default=False)
 
     args = parser.parse_args()
     

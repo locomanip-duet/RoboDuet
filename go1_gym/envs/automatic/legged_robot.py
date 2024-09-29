@@ -1010,18 +1010,42 @@ class LeggedRobot(BaseTask):
         #     if not self.cfg.hybrid.plan_vel:
         #         self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
             
+            
         if not self.cfg.hybrid.plan_vel:
             self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
             self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
             self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
-            self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
+            # self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)   
+            
+            # 随机选择10%的环境
+            num_zero_envs = int(0.1 * len(env_ids))
+            zero_env_ids = torch.randperm(len(env_ids))[:num_zero_envs]
+            
+            # 将选中的环境的commands设为0
+            self.commands_dog[env_ids[zero_env_ids], :3] = 0
+            
+            self.commands_dog[env_ids, 0] *= (self.commands_dog[env_ids, 0] > 0.07)
+            self.commands_dog[env_ids, 1] *= (self.commands_dog[env_ids, 1] > 0.07)
+            self.commands_dog[env_ids, 2] *= (self.commands_dog[env_ids, 2] > 0.1)
+        
+            
         else:
             if not global_switch.switch_open:
                 self.commands_dog[env_ids, 0] = torch.Tensor(new_commands[:, 0]).to(self.device)
                 self.commands_dog[env_ids, 1] = torch.Tensor(new_commands[:, 1]).to(self.device)
                 self.commands_dog[env_ids, 2] = torch.Tensor(new_commands[:, 2]).to(self.device)
-                self.commands_dog[env_ids, :2] *= (torch.norm(self.commands_dog[env_ids, :2], dim=1) > 0.1).unsqueeze(1)   
-            
+                
+                # 随机选择10%的环境
+                num_zero_envs = int(0.1 * len(env_ids))
+                zero_env_ids = torch.randperm(len(env_ids))[:num_zero_envs]
+                
+                # 将选中的环境的commands设为0
+                self.commands_dog[env_ids[zero_env_ids], :3] = 0
+                
+                self.commands_dog[env_ids, 0] *= (self.commands_dog[env_ids, 0] > 0.07)
+                self.commands_dog[env_ids, 1] *= (self.commands_dog[env_ids, 1] > 0.07)
+                self.commands_dog[env_ids, 2] *= (self.commands_dog[env_ids, 2] > 0.1)
+                
         if not global_switch.switch_open:
             self.commands_dog[env_ids, 3] = torch.Tensor(new_commands[:, 3]).to(self.device)
             self.commands_dog[env_ids, 4] = torch.Tensor(new_commands[:, 4]).to(self.device)
@@ -2020,7 +2044,7 @@ class LeggedRobot(BaseTask):
 
         for idxs in foot_indices:
             
-            idxs[(torch.norm(self.commands_dog[:, :2], dim=1) < 0.1)] = 0.25 # mark stand
+            idxs[(torch.norm(self.commands_dog[:, :3], dim=1) < 0.1)] = 0.25 # mark stand
             # print((torch.norm(self.commands_dog[:, :2], dim=1).shape))
             stance_idxs = torch.remainder(idxs, 1) < durations
             swing_idxs = torch.remainder(idxs, 1) > durations
