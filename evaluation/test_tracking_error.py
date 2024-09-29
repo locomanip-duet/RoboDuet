@@ -203,12 +203,15 @@ class TrackingTester:
         actor_critic.eval()
         adaptation_module = actor_critic.adaptation_module
         body = actor_critic.actor_body
-
+        actor_his = actor_critic.actor_history_encoder
+        
         def policy(obs, info={}):
-            latent = adaptation_module.forward(obs["obs_history"].to(self.device))
-            action = body.forward(torch.cat((obs["obs"].to(self.device), latent), dim=-1))
+            hist = actor_his.forward(obs["obs_history"][..., :-Cfg.arm.arm_num_observations])
+            latent = adaptation_module.forward(obs["obs_history"])
+            action = body.forward(torch.cat((obs["obs"], latent, hist), dim=-1))
             info['latent'] = latent
             return action
+
         
         return policy
 
@@ -509,7 +512,8 @@ if __name__ == "__main__":
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/download/go1_torque_0704"
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/232428.254725_seed7153"
     ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/adapt_dofx10/2024-08-09/auto_train/155105.439947_seed9913"
-    args.ckpt_number = "080000"
+    ckpt_folder = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
+    args.ckpt_number = "050000"
     runner = TrackingTester(
         vel = args.vel,
         num_envs = args.num_envs,

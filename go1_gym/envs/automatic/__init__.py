@@ -390,6 +390,20 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
             self.viewer, gymapi.KEY_J, "arm left")
         self.gym.subscribe_viewer_keyboard_event(
             self.viewer, gymapi.KEY_L, "arm right")
+
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_W, "arm pitch down")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_S, "arm pitch up")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_A, "arm roll left")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_D, "arm roll right")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_Q, "arm yaw left")
+        self.gym.subscribe_viewer_keyboard_event(
+            self.viewer, gymapi.KEY_E, "arm yaw right")
+
         self.gym.subscribe_viewer_keyboard_event(
             self.viewer, gymapi.KEY_R, "reset")
         
@@ -453,6 +467,19 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
                     self.commands_arm[0, 2] += 0.1
                 elif evt.action == 'arm right' and evt.value > 0:
                     self.commands_arm[0, 2] -= 0.1
+                elif evt.action == 'arm pitch down' and evt.value > 0:
+                    self.commands_arm[0, 4] += 0.1
+                elif evt.action == 'arm pitch up' and evt.value > 0:
+                    self.commands_arm[0, 4] -= 0.1
+                elif evt.action == 'arm roll left' and evt.value > 0:
+                    self.commands_arm[0, 3] += 0.1
+                elif evt.action == 'arm roll right' and evt.value > 0:
+                    self.commands_arm[0, 3] -= 0.1
+                elif evt.action == 'arm yaw left' and evt.value > 0:
+                    self.commands_arm[0, 5] += 0.1
+                elif evt.action == 'arm yaw right' and evt.value > 0:
+                    self.commands_arm[0, 5] -= 0.1
+                    
                 elif evt.action == 'reset' and evt.value > 0:
                     self.reset()
                     self.commands_dog[0, :3] = 0

@@ -18,6 +18,8 @@ from go1_gym.utils import quaternion_to_rpy, input_with_timeout
 from isaacgym import gymapi
 from pynput import keyboard
 import threading
+from go1_gym_deploy.lcm_types.arm_actions_t import arm_actions_t
+import math
 
 ckpt_id = '16000'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
@@ -58,7 +60,7 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/1
 logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369149_seed2423"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -71,15 +73,40 @@ l_cmd, p_cmd, y_cmd = 0.5, 0.5, 0
 roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, np.pi/2
 roll_cmd, pitch_cmd, yaw_cmd = 0.1, 0.5, 0
 
+shutdown = False
+delta_xyzrpy = np.zeros(6)
 
-# 0.8 0.9288397789009097 1.5707963267948966 0.08288302744708458 1.5576644087828007 0.8455169200897186
-l_cmd, p_cmd, y_cmd = 0.8, 0.9288397789009097, 1.5707963267948966
-roll_cmd, pitch_cmd, yaw_cmd = 0.08288302744708458, 1.5576644087828007, 0.8455169200897186
-roll_cmd, pitch_cmd, yaw_cmd = 0, 0, 0
+import signal
+import lcm
+lc = lcm.LCM("udpm://239.255.76.67:7136?ttl=255")
 
+def armdata_cb(channel, data):
+    global shutdown
+    if shutdown:
+        exit()
+    global delta_xyzrpy
+    print("update armdata")
+    msg = arm_actions_t.decode(data)
+    delta_xyzrpy = np.array(msg.data)[:6]
+    
+    # print(f"delta_xyzrpy: {self.delta_xyzrpy}")
+
+def signal_handler(sig, frame):
+    global shutdown
+    shutdown = True
+
+def lcm_thread():
+    while not shutdown:
+        lc.handle()
 
 def play_go1(headless=True):
-    global x_vel_cmd, y_vel_cmd, yaw_vel_cmd, l_cmd, p_cmd, y_cmd, roll_cmd, pitch_cmd, yaw_cmd
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    arm_control_subscription = lc.subscribe("arm_control_data", armdata_cb)
+    thread1 = threading.Thread(target=lcm_thread, daemon=False)
+    thread1.start()
+    
+    global x_vel_cmd, y_vel_cmd, yaw_vel_cmd, l_cmd, p_cmd, y_cmd, roll_cmd, pitch_cmd, yaw_cmd, delta_xyzrpy
             
     from go1_gym.utils.global_switch import global_switch
     global_switch.open_switch()
@@ -111,29 +138,65 @@ def play_go1(headless=True):
     
     obs = env.get_arm_observations()
     # arm_obs = env.get_arm_observations()
+    
+    last_arm_actions = None
+    filter_rate = 0.8
+    
     for i in (range(num_eval_steps)):
 
         with torch.no_grad():
             t1 = time.time()
             obs = env.get_arm_observations()
             actions_arm = arm_policy(obs)
-            env.plan(actions_arm[..., -2:])
+            # if last_arm_actions is None:
+            #     last_arm_actions = actions_arm[..., :-2]
+            #     smooth_arm_actions = actions_arm[..., :-2]
+            # else:
+            #     smooth_arm_actions = filter_rate * last_arm_actions + (1 - filter_rate) * actions_arm[..., :-2]
+            #     last_arm_actions = smooth_arm_actions
+                
+            if last_arm_actions is None:
+                last_arm_actions = actions_arm
+                smooth_arm_actions = actions_arm
+            else:
+                smooth_arm_actions = filter_rate * last_arm_actions + (1 - filter_rate) * actions_arm
+                last_arm_actions = smooth_arm_actions
+                
+            env.plan(smooth_arm_actions[..., -2:])
             dog_obs = env.get_dog_observations()
             actions_dog = dog_policy(dog_obs)
 
-        ret = env.step(actions_dog, actions_arm[...,:-2], )
+        ret = env.step(actions_dog, smooth_arm_actions[..., :-2], )
 
-        env.commands_dog[:, 0] = x_vel_cmd
-        env.commands_dog[:, 1] = y_vel_cmd
-        env.commands_dog[:, 2] = yaw_vel_cmd
-        # env.commands_dog[:, 10] = -0.4
-        # env.commands_dog[:, 11] = 0
-        env.commands_arm[:, 0] = l_cmd
-        env.commands_arm[:, 1] = p_cmd
-        env.commands_arm[:, 2] = y_cmd
-        env.commands_arm[:, 3] = roll_cmd
-        env.commands_arm[:, 4] = pitch_cmd
-        env.commands_arm[:, 5] = yaw_cmd
+
+        delta_x1, delta_y1, delta_z1, delta_roll, delta_pitch, delta_yaw = delta_xyzrpy
+        delta_x1 += 0.3
+        delta_l = np.sqrt(delta_x1**2 + delta_y1**2 + delta_z1**2)
+        delta_y = np.arctan2(delta_y1, delta_x1)  # 方位角
+        delta_p = np.arcsin(delta_z1 / delta_l) if delta_l != 0 else 0  # 极角
+    
+        print("delta_xyzrpy: ", delta_x1, delta_y1, delta_z1, delta_roll, delta_pitch, delta_yaw)
+        print("delta_lpy: ", delta_l, delta_p, delta_y)
+        
+        cmd_l = min(max(delta_l + 0.2, 0.3), 0.8)  # 0.3 ~ 0.8
+        cmd_p = min(max(delta_p + 0.2, -np.pi/3), np.pi/3)   # -pi/3 ~ pi/3
+        cmd_y = min(max(delta_y, -np.pi/2), np.pi/2)  # -pi/3 ~ pi/3
+    
+        cmd_alpha = min(max(delta_roll, -np.pi * 0.45), np.pi * 0.45)  # -pi/3 ~ pi/3
+        cmd_beta = min(max(delta_pitch, -1.5), 1.5)  # -pi/3 ~ pi/3
+        cmd_gamma = min(max(delta_yaw, -1.4), 1.4) # -pi/3 ~ pi/3
+
+        cmd_alpha, cmd_beta, cmd_gamma = rpy_to_abg(cmd_alpha, cmd_beta, cmd_gamma)
+
+        print("commands: ", cmd_l, cmd_p, cmd_y, cmd_alpha, cmd_beta, cmd_gamma)
+        env.commands_arm[:, 0] = cmd_l
+        env.commands_arm[:, 1] = cmd_p
+        env.commands_arm[:, 2] = cmd_y
+        env.commands_arm[:, 3] = cmd_alpha
+        env.commands_arm[:, 4] = cmd_beta
+        env.commands_arm[:, 5] = cmd_gamma
+        
+
 
         if control_type == 'random':
             if i % 100 == 0:
@@ -222,6 +285,8 @@ def load_env(logdir, headless=False):
     Cfg.hybrid.rewards.use_terminal_roll = False
     Cfg.hybrid.rewards.use_terminal_pitch = False
     Cfg.arm.commands.T_traj = [20000, 30000]
+    
+    Cfg.rewards.use_terminal_body_height = False
     Cfg.sim.physx["num_position_iterations"] = 8
     Cfg.sim.physx["num_velocity_iterations"] = 8
     
@@ -309,6 +374,112 @@ def load_arm_policy(logdir, Cfg):
 
     return policy
 
+def quat_apply(a, b):
+    if not isinstance(a, torch.Tensor):
+        a = torch.tensor(a)
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b)
+    shape = b.shape
+    a = a.reshape(-1, 4)
+    b = b.reshape(-1, 3)
+    xyz = a[:, :3]
+    t = xyz.cross(b, dim=-1) * 2
+    return (b + a[:, 3:] * t + xyz.cross(t, dim=-1)).view(shape)
+
+def get_rpy_from_quaternion(q):
+    w, x, y, z = q
+    r = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x ** 2 + y ** 2))
+    p = np.arcsin(2 * (w * y - z * x))
+    y = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y ** 2 + z ** 2))
+    return np.array([r, p, y])
+
+
+def get_rotation_matrix_from_rpy(rpy):
+    """
+    Get rotation matrix from the given quaternion.
+    Args:
+        q (np.array[float[4]]): quaternion [w,x,y,z]
+    Returns:
+        np.array[float[3,3]]: rotation matrix.
+    """
+    r, p, y = rpy
+    R_x = np.array([[1, 0, 0],
+                    [0, math.cos(r), -math.sin(r)],
+                    [0, math.sin(r), math.cos(r)]
+                    ])
+
+    R_y = np.array([[math.cos(p), 0, math.sin(p)],
+                    [0, 1, 0],
+                    [-math.sin(p), 0, math.cos(p)]
+                    ])
+
+    R_z = np.array([[math.cos(y), -math.sin(y), 0],
+                    [math.sin(y), math.cos(y), 0],
+                    [0, 0, 1]
+                    ])
+
+    rot = np.dot(R_z, np.dot(R_y, R_x))
+    return rot
+
+def quat_from_euler_xyz(roll, pitch, yaw):
+    cy = np.cos(yaw * 0.5)
+    sy = np.sin(yaw * 0.5)
+    cr = np.cos(roll * 0.5)
+    sr = np.sin(roll * 0.5)
+    cp = np.cos(pitch * 0.5)
+    sp = np.sin(pitch * 0.5)
+
+    qw = cy * cr * cp + sy * sr * sp
+    qx = cy * sr * cp - sy * cr * sp
+    qy = cy * cr * sp + sy * sr * cp
+    qz = sy * cr * cp - cy * sr * sp
+
+    return np.stack([qx, qy, qz, qw], axis=-1)
+
+def quat_mul(a, b):
+    assert a.shape == b.shape
+    shape = a.shape
+    a = a.reshape(-1, 4)
+    b = b.reshape(-1, 4)
+
+    x1, y1, z1, w1 = a[:, 0], a[:, 1], a[:, 2], a[:, 3]
+    x2, y2, z2, w2 = b[:, 0], b[:, 1], b[:, 2], b[:, 3]
+    ww = (z1 + x1) * (x2 + y2)
+    yy = (w1 - y1) * (w2 + z2)
+    zz = (w1 + y1) * (w2 - z2)
+    xx = ww + yy + zz
+    qq = 0.5 * (xx + (z1 - x1) * (x2 - y2))
+    w = qq - ww + (z1 - y1) * (y2 - z2)
+    x = qq - xx + (x1 + w1) * (x2 + w2)
+    y = qq - yy + (w1 - x1) * (y2 + z2)
+    z = qq - zz + (z1 + y1) * (w2 - x2)
+
+    quat = np.stack([x, y, z, w], axis=-1).reshape(shape)
+
+    return quat
+
+def quat_to_angle(quat):
+    y_vector = torch.tensor([0., 1., 0.]).double()
+    z_vector = torch.tensor([0., 0., 1.]).double()
+    x_vector = torch.tensor([1., 0., 0.]).double()
+    roll_vec = quat_apply(quat, y_vector) # [0,1,0]
+    roll = torch.atan2(roll_vec[2], roll_vec[1]) # roll angle = arctan2(z, y)
+    pitch_vec = quat_apply(quat, z_vector) # [0,0,1]
+    pitch = torch.atan2(pitch_vec[0], pitch_vec[2]) # pitch angle = arctan2(x, z)
+    yaw_vec = quat_apply(quat, x_vector) # [1,0,0]
+    yaw = torch.atan2(yaw_vec[1], yaw_vec[0]) # yaw angle = arctan2(y, x)
+    
+    return torch.stack([roll, pitch, yaw], dim=-1)
+
+def rpy_to_abg(roll, pitch, yaw):
+    zero_vec = np.zeros_like(roll)
+    q1 = quat_from_euler_xyz(zero_vec, zero_vec, yaw)
+    q2 = quat_from_euler_xyz(zero_vec, pitch, zero_vec)
+    q3 = quat_from_euler_xyz(roll, zero_vec, zero_vec)
+    quats = quat_mul(q1, quat_mul(q2, q3))  # np, (4,)
+    abg = quat_to_angle(quats).numpy()
+    
+    return abg
 
 if __name__ == '__main__':
     # to see the environment rendering, set headless=False

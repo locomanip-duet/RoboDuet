@@ -85,7 +85,7 @@ def train_go1(arg):
     
     Cfg.hybrid.reward_scales.tracking_lin_vel = 0.7 * Cfg.reward_scales.tracking_lin_vel
     Cfg.hybrid.reward_scales.tracking_ang_vel = 0.5 * Cfg.reward_scales.tracking_ang_vel
-    Cfg.hybrid.reward_scales.guide = -2.0
+    # Cfg.hybrid.reward_scales.guide = -2.0
     Cfg.hybrid.reward_scales.arm_energy = -0.00004
     Cfg.reward_scales.loco_energy = -0.00004
 
@@ -94,7 +94,7 @@ def train_go1(arg):
     Cfg.rewards.use_terminal_body_height = True
     
     DogRunnerArgs.resume = args.resume
-    DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/rai_go1/2024-08-17/auto_train/014702.607462_seed4191/checkpoints_dog/ac_weights_009600.pt'
+    DogRunnerArgs.resume_path = '/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/132106.127576_seed8765/checkpoints_dog/ac_weights_009600.pt'
     ArmRunnerArgs.resume = False
     global_switch.pretrained_to_hybrid_start = 2000 if args.resume else 10000 # 2000 with pretrained, 10000 from scratch
     
@@ -132,6 +132,7 @@ def train_go1(arg):
     Cfg.hybrid.reward_scales.arm_dof_vel = 10 * Cfg.reward_scales.dof_vel
     Cfg.hybrid.reward_scales.arm_dof_acc = 10 * Cfg.reward_scales.dof_acc
     Cfg.hybrid.reward_scales.arm_action_rate = 10 * Cfg.reward_scales.action_rate
+    Cfg.domain_rand.gravity_range = [-4.0, 4.0]
     # Cfg.hybrid.reward_scales.dof_vel = 10 * Cfg.reward_scales.dof_vel
     # Cfg.hybrid.reward_scales.dof_acc = 10 * Cfg.reward_scales.dof_acc
     # Cfg.hybrid.reward_scales.action_rate = 10 * Cfg.reward_scales.action_rate
