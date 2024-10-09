@@ -21,47 +21,63 @@ import threading
 from go1_gym_deploy.lcm_types.arm_actions_t import arm_actions_t
 import math
 
-ckpt_id = '35200'
-logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-24/auto_train/232240.555805_seed5143"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-24/auto_train/232240.555805_seed5143"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-26/auto_train/104835.254987_seed8259"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-27/auto_train/160031.483706_seed2321"  # ori-10, unlearnstd
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net_torque/2024-07-28/auto_train/102920.560840_seed2720"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-13/auto_train/153714.747408_seed7785"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_torque_deploy/2024-07-14/auto_train/225946.835720_seed8765"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-24/auto_train/232240.555805_seed5143"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-24/auto_train/232240.555805_seed5143"  # ori-10, unlearnstd
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-26/auto_train/104835.254987_seed8259"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-27/auto_train/160031.483706_seed2321"  # ori-10, unlearnstd
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net_torque/2024-07-28/auto_train/102920.560840_seed2720"  # ori-10, unlearnstd
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/new_net/2024-07-26/auto_train/104835.254987_seed8259"  # ori-10, unlearnstd
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-28/auto_train/153534.455846_seed6756"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-28/auto_train/153534.455846_seed6756"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/clip_1entro_lr5e-4/2024-07-28/auto_train/153534.455846_seed6756"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std/2024-07-29/auto_train/195358.289314_seed1510"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std_lin_up2/2024-07-30/auto_train/180800.674781_seed7296"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/115156.889211_seed9678"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go2/2024-08-04/auto_train/134907.975219_seed9578"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/233050.190809_seed3037"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-08-08/auto_train/115208.492857_seed122"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std/2024-07-29/auto_train/195358.289314_seed1510"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/guide2_learn_std_lin_up2/2024-07-30/auto_train/180800.674781_seed7296"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/115156.889211_seed9678"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go2/2024-08-04/auto_train/134907.975219_seed9578"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1/2024-08-04/auto_train/233050.190809_seed3037"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-08-08/auto_train/115208.492857_seed122"
 
-logdir = "/home/a4090/hybrid_improve_dwb/runs/deploy/2024-08-08/auto_train/204439.440310_seed1357"
-# logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1_rai/2024-08-07/auto_train/100528.721289_seed8457"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/deploy/2024-08-08/auto_train/204439.440310_seed1357"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/adapt_dofx10/2024-08-09/auto_train/155105.439947_seed9913"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/new_pd_go1_rai/2024-08-07/auto_train/100528.721289_seed8457"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/deploy/2024-08-08/auto_train/204439.440310_seed1357"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/adapt_dofx10/2024-08-09/auto_train/155105.439947_seed9913"
 
-logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-12/auto_train/140258.051224_seed3807"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-17/auto_train/231540.015171_seed3302"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-21/auto_train/085928.815714_seed1115"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369140_seed8765_go2"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-12/auto_train/140258.051224_seed3807"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
-# logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369149_seed2423"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/OBS_NAN/2024-08-14/auto_train/233242.833014_seed8207"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-17/auto_train/231540.015171_seed3302"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/hip0.5/2024-08-21/auto_train/085928.815714_seed1115"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369140_seed8765_go2"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
-# logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
-# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
+# # logdir = "/home/a4090/3party/ablation/RoboDuet_926/135655.369149_seed2423"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_noguide/2024-09-29/auto_train/181604.885903_seed8765"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_noguide/2024-09-30/auto_train/121852.168781_seed8765"
+# # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-01/auto_train/002926.095614_seed8765"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
+# ckpt_id = '50000'
+
+
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-01/auto_train/214224.708054_seed8765"
+ckpt_id = '030000'
+
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-02/auto_train/131459.371316_seed8765"
+ckpt_id = '020000'
+
+logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated_guide/2024-10-02/auto_train/211356.749940_seed8765"
+# ckpt_id = '020000'
+ckpt_id = '029200'
+
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -70,9 +86,10 @@ if control_type == 'random':
 
 x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 0., 0.0, 0
 l_cmd, p_cmd, y_cmd = 0.55, -0.6, 0.9
-l_cmd, p_cmd, y_cmd = 0.5, 0.5, 0
+l_cmd, p_cmd, y_cmd = 0.5, 0.2, 0
 roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, np.pi/2
 roll_cmd, pitch_cmd, yaw_cmd = 0.1, 0.5, 0
+roll_cmd, pitch_cmd, yaw_cmd = 0., 0., 0
 
 shutdown = False
 delta_xyzrpy = np.zeros(6)
@@ -141,7 +158,9 @@ def play_go1(headless=True):
     # arm_obs = env.get_arm_observations()
     
     last_arm_actions = None
+    last_pitch_roll = None
     filter_rate = 0.8
+    pitch_filter_rate = 0.95
     
     for i in (range(num_eval_steps)):
 
@@ -149,25 +168,25 @@ def play_go1(headless=True):
             t1 = time.time()
             obs = env.get_arm_observations()
             actions_arm = arm_policy(obs)
-            # if last_arm_actions is None:
-            #     last_arm_actions = actions_arm[..., :-2]
-            #     smooth_arm_actions = actions_arm[..., :-2]
-            # else:
-            #     smooth_arm_actions = filter_rate * last_arm_actions + (1 - filter_rate) * actions_arm[..., :-2]
-            #     last_arm_actions = smooth_arm_actions
-                
             if last_arm_actions is None:
                 last_arm_actions = actions_arm
-                smooth_arm_actions = actions_arm
+                last_pitch_roll = actions_arm[..., -2:]
             else:
-                smooth_arm_actions = filter_rate * last_arm_actions + (1 - filter_rate) * actions_arm
-                last_arm_actions = smooth_arm_actions
+                last_arm_actions = filter_rate * last_arm_actions + (1 - filter_rate) * actions_arm
+                last_pitch_roll = pitch_filter_rate * last_pitch_roll + (1 - pitch_filter_rate) * actions_arm[..., -2:]
                 
-            env.plan(smooth_arm_actions[..., -2:])
+            # if last_arm_actions is None:
+            #     last_arm_actions = actions_arm
+            #     smooth_arm_actions = actions_arm
+            # else:
+            #     smooth_arm_actions = filter_rate * last_arm_actions + (1 - filter_rate) * actions_arm
+            #     last_arm_actions = smooth_arm_actions
+                
+            env.plan(last_pitch_roll)
             dog_obs = env.get_dog_observations()
             actions_dog = dog_policy(dog_obs)
 
-        ret = env.step(actions_dog, smooth_arm_actions[..., :-2], )
+        ret = env.step(actions_dog, last_arm_actions[..., :-2], )
 
 
         delta_x1, delta_y1, delta_z1, delta_roll, delta_pitch, delta_yaw = delta_xyzrpy
@@ -180,7 +199,7 @@ def play_go1(headless=True):
         print("delta_lpy: ", delta_l, delta_p, delta_y)
         
         cmd_l = min(max(delta_l + 0.2, 0.3), 0.8)  # 0.3 ~ 0.8
-        cmd_p = min(max(delta_p + 0.2, -np.pi/3), np.pi/3)   # -pi/3 ~ pi/3
+        cmd_p = min(max(delta_p + 0.3, -np.pi/3), np.pi/3)   # -pi/3 ~ pi/3
         cmd_y = min(max(delta_y, -np.pi/2), np.pi/2)  # -pi/3 ~ pi/3
     
         cmd_alpha = min(max(delta_roll, -np.pi * 0.45), np.pi * 0.45)  # -pi/3 ~ pi/3
@@ -203,19 +222,19 @@ def play_go1(headless=True):
             if i % 100 == 0:
                 
                 if not reorientation:
-                    l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:0").squeeze().item()
-                    p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:0").squeeze().item()
-                    y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                    l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:1").squeeze().item()
+                    p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:1").squeeze().item()
+                    y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:1").squeeze().item()
                 
-                roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-                pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-                yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:1").squeeze().item()
+                pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:1").squeeze().item()
+                yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:1").squeeze().item()
                 
 
                 
                 if moving:
-                    x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:0").squeeze().item()
-                    yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:0").squeeze().item()
+                    x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:1").squeeze().item()
+                    yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:1").squeeze().item()
                     
                     
 
@@ -303,7 +322,7 @@ def load_env(logdir, headless=False):
 
     
 
-    env = KeyboardWrapper(sim_device='cuda:0', headless=headless, cfg=Cfg)
+    env = KeyboardWrapper(sim_device='cuda:1', headless=headless, cfg=Cfg)
     env = HistoryWrapper(env)
     # load policy
 

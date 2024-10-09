@@ -688,7 +688,7 @@ class LeggedRobot(BaseTask):
         return torch.stack([l, p, y_aw], dim=-1)
 
 
-    def get_roll_pitch_yaw_in_base_coord(self, env_ids):
+    def get_alpha_beta_gamma_in_base_coord(self, env_ids):
         forward = quat_apply(self.base_quat[env_ids], self.forward_vec[env_ids])
         yaw = torch.atan2(forward[:, 1], forward[:, 0])
         base_quats = quat_from_euler_xyz(torch.zeros_like(yaw), torch.zeros_like(yaw), yaw)
@@ -1024,9 +1024,9 @@ class LeggedRobot(BaseTask):
             # 将选中的环境的commands设为0
             self.commands_dog[env_ids[zero_env_ids], :3] = 0
             
-            self.commands_dog[env_ids, 0] *= (self.commands_dog[env_ids, 0] > 0.07)
-            self.commands_dog[env_ids, 1] *= (self.commands_dog[env_ids, 1] > 0.07)
-            self.commands_dog[env_ids, 2] *= (self.commands_dog[env_ids, 2] > 0.1)
+            self.commands_dog[env_ids, 0] *= torch.abs(self.commands_dog[env_ids, 0]) > 0.07
+            self.commands_dog[env_ids, 1] *= torch.abs(self.commands_dog[env_ids, 1]) > 0.07
+            self.commands_dog[env_ids, 2] *= torch.abs(self.commands_dog[env_ids, 2]) > 0.1
         
             
         else:
@@ -1042,9 +1042,9 @@ class LeggedRobot(BaseTask):
                 # 将选中的环境的commands设为0
                 self.commands_dog[env_ids[zero_env_ids], :3] = 0
                 
-                self.commands_dog[env_ids, 0] *= (self.commands_dog[env_ids, 0] > 0.07)
-                self.commands_dog[env_ids, 1] *= (self.commands_dog[env_ids, 1] > 0.07)
-                self.commands_dog[env_ids, 2] *= (self.commands_dog[env_ids, 2] > 0.1)
+                self.commands_dog[env_ids, 0] *= torch.abs(self.commands_dog[env_ids, 0]) > 0.07
+                self.commands_dog[env_ids, 1] *= torch.abs(self.commands_dog[env_ids, 1]) > 0.07
+                self.commands_dog[env_ids, 2] *= torch.abs(self.commands_dog[env_ids, 2]) > 0.1
                 
         if not global_switch.switch_open:
             self.commands_dog[env_ids, 3] = torch.Tensor(new_commands[:, 3]).to(self.device)

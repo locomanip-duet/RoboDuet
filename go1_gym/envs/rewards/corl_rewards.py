@@ -81,13 +81,13 @@ class CoRLRewards:
         return torch.exp(-lpy_error)
 
     def _reward_vis_manip_commands_tracking_rpy(self):
-        rpy = self.env.get_roll_pitch_yaw_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        rpy = self.env.get_alpha_beta_gamma_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
         rpy_error = torch.sum((torch.abs(rpy - self.env.commands_arm_obs[:, 3:6])) / self.env.commands_arm_rpy_range, dim=1)
         return torch.exp(-rpy_error)
 
     def _reward_arm_manip_commands_tracking_combine(self):
         lpy = self.env.get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
-        rpy = self.env.get_roll_pitch_yaw_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        rpy = self.env.get_alpha_beta_gamma_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
         lpy_error = torch.sum((torch.abs(lpy - self.env.commands_arm_obs[:, 0:3])) / self.env.commands_arm_lpy_range, dim=1)
         rpy_error = torch.sum((torch.abs(rpy - self.env.commands_arm_obs[:, 3:6])) / self.env.commands_arm_rpy_range, dim=1)
         # rpy_error = torch.sum((torch.abs(self.env.commands[:, 5:8])) / self.env.commands_arm_rpy_range, dim=1)
@@ -182,15 +182,28 @@ class CoRLRewards:
 
     def _reward_action_smoothness_1(self):
         # Penalize changes in actions
-        diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actuated_dof] - self.env.last_joint_pos_target[:, :self.env.num_actuated_dof])
-        diff = diff * (self.env.last_actions[:, :self.env.num_dof] != 0)  # ignore first step
+        diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actions_loco] - self.env.last_joint_pos_target[:, :self.env.num_actions_loco])
+        diff = diff * (self.env.last_actions[:, :self.env.num_actions_loco] != 0)  # ignore first step
         return torch.sum(diff, dim=1)
 
     def _reward_action_smoothness_2(self):
         # Penalize changes in actions
-        diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actuated_dof] - 2 * self.env.last_joint_pos_target[:, :self.env.num_actuated_dof] + self.env.last_last_joint_pos_target[:, :self.env.num_actuated_dof])
-        diff = diff * (self.env.last_actions[:, :self.env.num_dof] != 0)  # ignore first step
-        diff = diff * (self.env.last_last_actions[:, :self.env.num_dof] != 0)  # ignore second step
+        diff = torch.square(self.env.joint_pos_target[:, :self.env.num_actions_loco] - 2 * self.env.last_joint_pos_target[:, :self.env.num_actions_loco] + self.env.last_last_joint_pos_target[:, :self.env.num_actions_loco])
+        diff = diff * (self.env.last_actions[:, :self.env.num_actions_loco] != 0)  # ignore first step
+        diff = diff * (self.env.last_last_actions[:, :self.env.num_actions_loco] != 0)  # ignore second step
+        return torch.sum(diff, dim=1)
+
+    def _reward_arm_action_smoothness_1(self):
+        # Penalize changes in actions
+        diff = torch.square(self.env.joint_pos_target[:, self.env.num_actions_loco:-2] - self.env.last_joint_pos_target[:, self.env.num_actions_loco:-2])
+        diff = diff * (self.env.last_actions[:, self.env.num_actions_loco:] != 0)  # ignore first step
+        return torch.sum(diff, dim=1)
+
+    def _reward_arm_action_smoothness_2(self):
+        # Penalize changes in actions
+        diff = torch.square(self.env.joint_pos_target[:, self.env.num_actions_loco:-2] - 2 * self.env.last_joint_pos_target[:, self.env.num_actions_loco:-2] + self.env.last_last_joint_pos_target[:, self.env.num_actions_loco:-2])
+        diff = diff * (self.env.last_actions[:, self.env.num_actions_loco:] != 0)  # ignore first step
+        diff = diff * (self.env.last_last_actions[:, self.env.num_actions_loco:] != 0)  # ignore second step
         return torch.sum(diff, dim=1)
 
     def _reward_feet_slip(self):
@@ -233,12 +246,21 @@ class CoRLRewards:
         # Penalize collisions on selected bodies
         return torch.sum(1. * (torch.norm(self.env.contact_forces[:, self.env.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
 
+    # def _reward_guide(self):
+    #     guide = torch.zeros_like(self.env.pitch)
+    #     down_flag = self.env.delta_z < -self.env.cfg.hybrid.rewards.headupdown_thres - 0.1
+    #     up_flag = self.env.delta_z > self.env.cfg.hybrid.rewards.headupdown_thres + 0.3
+    #     guide[down_flag] = torch.square(self.env.pitch - 0.4)[down_flag]
+    #     guide[up_flag] = torch.square(self.env.pitch + 0.3)[up_flag]
+        
+    #     return guide
+
     def _reward_guide(self):
         guide = torch.zeros_like(self.env.pitch)
         down_flag = self.env.delta_z < -self.env.cfg.hybrid.rewards.headupdown_thres
-        up_flag = self.env.delta_z > self.env.cfg.hybrid.rewards.headupdown_thres
+        up_flag = self.env.delta_z > self.env.cfg.hybrid.rewards.headupdown_thres+0.3
         guide[down_flag] = torch.square(self.env.pitch - 0.4)[down_flag]
-        guide[up_flag] = torch.square(self.env.pitch + 0.4)[up_flag]
+        guide[up_flag] = torch.square(self.env.pitch + 0.3)[up_flag]
         
         return guide
 

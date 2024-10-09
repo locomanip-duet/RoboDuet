@@ -282,7 +282,7 @@ class TrackingTester:
             return x, y, z, distance between target & actual point
         """
         lpy = self.env.get_lpy_in_base_coord(torch.arange(self.num_envs, device=self.device))
-        rpy = self.env.get_roll_pitch_yaw_in_base_coord(torch.arange(self.num_envs, device=self.device))
+        rpy = self.env.get_alpha_beta_gamma_in_base_coord(torch.arange(self.num_envs, device=self.device))
         lpy_error = torch.abs(lpy - self.env.commands_arm_obs[:, 0:3])
         abg_error = torch.abs(rpy - self.env.commands_arm_obs[:, 3:6])
         distance_error = torch.norm(self.lpy_to_local_xyz(lpy) - self.lpy_to_local_xyz(self.env.commands_arm_obs[:, 0:3]), dim=1).view(-1, 1)

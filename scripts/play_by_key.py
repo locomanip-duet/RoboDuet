@@ -19,7 +19,6 @@ from isaacgym import gymapi
 from pynput import keyboard
 import threading
 
-ckpt_id = '35200'
 
 logdir = "/home/a4090/hybrid_improve_dwb/runs/test/2024-07-02/auto_train/014352.478696_seed2247"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/go1_arx_torque/2024-07-12/auto_train/230725.964702_seed4265"  # ori-10, learnstd
@@ -56,12 +55,26 @@ logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/finalgo2/2024-08-12/auto_train/235041.777464_seed6497"
 logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369149_seed2423"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-25/auto_train/135655.369149_seed2423"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-27/auto_train/105222.811416_seed8765"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated/2024-09-26/auto_train/222815.236228_seed2423"
 # logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet/2024-09-28/auto_train/214010.181323_seed8765"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_noguide/2024-09-29/auto_train/181604.885903_seed8765"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_noguide/2024-09-30/auto_train/121852.168781_seed8765"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-01/auto_train/002926.095614_seed8765"
+ckpt_id = '27200'
 logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-09-29/auto_train/171244.096122_seed8765"
-logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_noguide/2024-09-29/auto_train/181604.885903_seed8765"
+logdir = "/home/a4090/policy_deployment/runs/2024-09-29/auto_train/171244.096122_seed8765"
+
+logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-01/auto_train/214224.708054_seed8765"
+ckpt_id = '030000'
+
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-02/auto_train/131459.371316_seed8765"
+logdir = "/home/a4090/hybrid_improve_dwb/runs/Cooperated_guide/2024-10-02/auto_train/211356.749940_seed8765"
+
+# logdir = "/home/a4090/hybrid_improve_dwb/runs/RoboDuet_guide/2024-10-03/auto_train/004642.921867_seed4692"
+ckpt_id = '029200'
 
 control_type = 'use_key'  # or 'random'
 if control_type == 'random':
@@ -70,9 +83,12 @@ if control_type == 'random':
 
 x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 0., 0.0, 0
 l_cmd, p_cmd, y_cmd = 0.55, -0.6, 0.9
-l_cmd, p_cmd, y_cmd = 0.5, 0.5, 0
+l_cmd, p_cmd, y_cmd = 0.5, 0.2, 0
 roll_cmd, pitch_cmd, yaw_cmd = np.pi/4, np.pi/4, np.pi/2
 roll_cmd, pitch_cmd, yaw_cmd = 0.1, 0.5, 0
+roll_cmd, pitch_cmd, yaw_cmd = 0., 0., 0
+# roll_cmd, pitch_cmd, yaw_cmd = 0.1, -0.1, 0.5
+
 
 
 # 0.8 0.9288397789009097 1.5707963267948966 0.08288302744708458 1.5576644087828007 0.8455169200897186
@@ -142,19 +158,19 @@ def play_go1(headless=True):
             if i % 100 == 0:
                 
                 if not reorientation:
-                    l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:0").squeeze().item()
-                    p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:0").squeeze().item()
-                    y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                    l_cmd = torch_rand_float(0.2, 0.8, (1,1), device="cuda:1").squeeze().item()
+                    p_cmd = torch_rand_float(-torch.pi/4, torch.pi/4, (1,1), device="cuda:1").squeeze().item()
+                    y_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:1").squeeze().item()
                 
-                roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-                pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:0").squeeze().item()
-                yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:0").squeeze().item()
+                roll_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:1").squeeze().item()
+                pitch_cmd = torch_rand_float(-torch.pi/3, torch.pi/3, (1,1), device="cuda:1").squeeze().item()
+                yaw_cmd = torch_rand_float(-torch.pi/3 , torch.pi/3, (1,1), device="cuda:1").squeeze().item()
                 
 
                 
                 if moving:
-                    x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:0").squeeze().item()
-                    yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:0").squeeze().item()
+                    x_vel_cmd = torch_rand_float(0.5, 1, (1,1), device="cuda:1").squeeze().item()
+                    yaw_vel_cmd = torch_rand_float(-1, 1, (1,1), device="cuda:1").squeeze().item()
                     
                     
 
@@ -225,8 +241,50 @@ def load_env(logdir, headless=False):
     Cfg.hybrid.rewards.use_terminal_roll = False
     Cfg.hybrid.rewards.use_terminal_pitch = False
     Cfg.arm.commands.T_traj = [20000, 30000]
-    Cfg.sim.physx["num_position_iterations"] = 8
-    Cfg.sim.physx["num_velocity_iterations"] = 8
+    # Cfg.sim.physx["num_position_iterations"] = 8
+    # Cfg.sim.physx["num_velocity_iterations"] = 8
+    
+    # Cfg.arm.control.stiffness_arm = {
+    #         # "zarx": 50,
+    #         # "zarx_j1": 40,
+    #         # "zarx_j2": 100,
+    #         # "zarx_j3": 100,
+    #         # "zarx_j4": 25,
+    #         # "zarx_j5": 25,
+    #         # "zarx_j6": 25,
+    #         # "zarx_j7": 50,
+    #         # "zarx_j8": 50,
+    #         "zarx": 50,
+    #         "zarx_j1": 40,
+    #         "zarx_j2": 70,
+    #         "zarx_j3": 70,
+    #         "zarx_j4": 25,
+    #         "zarx_j5": 25,
+    #         "zarx_j6": 25,
+    #         "zarx_j7": 50,
+    #         "zarx_j8": 50,
+        
+    # }  # [N*m/rad]
+    # Cfg.arm.control.damping_arm = {
+    #         # "zarx": 20,
+    #         # "zarx_j1": 3,
+    #         # "zarx_j2": 11,
+    #         # "zarx_j3": 6,
+    #         # "zarx_j4": 2,
+    #         # "zarx_j5": 2,
+    #         # "zarx_j6": 2,
+    #         # "zarx_j7": 20,
+    #         # "zarx_j8": 20,
+    #         "zarx": 20,
+    #         "zarx_j1": 3,
+    #         "zarx_j2": 30,
+    #         "zarx_j3": 15,
+    #         "zarx_j4": 10,
+    #         "zarx_j5": 2,
+    #         "zarx_j6": 2,
+    #         "zarx_j7": 20,
+    #         "zarx_j8": 20,
+    # }  # [N*m*s/rad]
     
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/go2/urdf/arx5go2_origin.urdf'
     # Cfg.asset.file = '{MINI_GYM_ROOT_DIR}/resources/robots/arx5p2Go1/urdf/arx5p2Go1.urdf'
@@ -240,7 +298,7 @@ def load_env(logdir, headless=False):
 
     
 
-    env = KeyboardWrapper(sim_device='cuda:0', headless=headless, cfg=Cfg)
+    env = KeyboardWrapper(sim_device='cuda:1', headless=headless, cfg=Cfg)
     env = HistoryWrapper(env)
     # load policy
 
