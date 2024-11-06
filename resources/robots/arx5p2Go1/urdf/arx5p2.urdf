@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="arx5p2">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-2.99718553142654E-05 3.05595229038557E-05 0.0273007719748077"
+        rpy="0 0 0" />
+      <mass
+        value="0.440377203703276" />
+      <inertia
+        ixx="0.00017"
+        ixy="0.00000"
+        ixz="0.00000"
+        iyy="0.00018"
+        iyz="0.00000"
+        izz="0.00016" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link1">
+    <inertial>
+      <origin
+        xyz="0.00593840433365978 -0.00472599953587056 0.0175081397461388"
+        rpy="0 0 0" />
+      <mass
+        value="0.0601565264856801" />
+      <inertia
+        ixx="0.00007"
+        ixy="0.00000"
+        ixz="0.00001"
+        iyy="0.00003"
+        iyz="-0.00001"
+        izz="0.00007" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint1"
+    type="revolute">
+    <origin
+      xyz="0 0 0.0605"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="link1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-2.6179938779914944"
+      upper="3.141592653589793"
+      effort="15"
+      velocity="3" />
+  </joint>
+  <link
+    name="link2">
+    <inertial>
+      <origin
+        xyz="-0.133119105376737 0.00212876404883936 0.000300078564270057"
+        rpy="0 0 0" />
+      <mass
+        value="1.08500113729484" />
+      <inertia
+        ixx="0.00051"
+        ixy="0.00000"
+        ixz="-0.00006"
+        iyy="0.01608"
+        iyz="0.00000"
+        izz="0.01613" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint2"
+    type="revolute">
+    <origin
+      xyz="0.02 0 0.04"
+      rpy="0 0 0" />
+    <parent
+      link="link1" />
+    <child
+      link="link2" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="0"
+      upper="3.6651797625214253"
+      effort="15"
+      velocity="3" />
+  </joint>
+  <link
+    name="link3">
+    <inertial>
+      <origin
+        xyz="0.187211265543004 -0.000291648902073816 -0.051519273045457"
+        rpy="0 0 0" />
+      <mass
+        value="0.503070815258962" />
+      <inertia
+        ixx="0.00033"
+        ixy="-0.00007"
+        ixz="-0.00039"
+        iyy="0.00387"
+        iyz="0.00001"
+        izz="0.00384" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint3"
+    type="revolute">
+    <origin
+      xyz="-0.264 0 0"
+      rpy="3.1416 0 0" />
+    <parent
+      link="link2" />
+    <child
+      link="link3" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="0"
+      upper="3.141582653589793"
+      effort="15"
+      velocity="3" />
+  </joint>
+  <link
+    name="link4">
+    <inertial>
+      <origin
+        xyz="0.0371664380100891 0.00481376112145174 -0.0314686710287568"
+        rpy="0 0 0" />
+      <mass
+        value="0.0973570675974181" />
+      <inertia
+        ixx="0.00016"
+        ixy="-0.00001"
+        ixz="-0.00007"
+        iyy="0.00019"
+        iyz="0.00001"
+        izz="0.00011" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint4"
+    type="revolute">
+    <origin
+      xyz="0.245 0 -0.056"
+      rpy="0 0 0" />
+    <parent
+      link="link3" />
+    <child
+      link="link4" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5707913267948965"
+      upper="1.5707913267948965"
+      effort="3"
+      velocity="3" />
+  </joint>
+  <link
+    name="link5">
+    <inertial>
+      <origin
+        xyz="0.00304994488747809 -4.95381751929073E-05 0.0540298691931158"
+        rpy="0 0 0" />
+      <mass
+        value="0.59699075812436" />
+      <inertia
+        ixx="0.00072"
+        ixy="0.00000"
+        ixz="0.00005"
+        iyy="0.00070"
+        iyz="0.00000"
+        izz="0.00021" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint5"
+    type="revolute">
+    <origin
+      xyz="0.06675 0 -0.084"
+      rpy="0 0 0" />
+    <parent
+      link="link4" />
+    <child
+      link="link5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5707913267948965"
+      upper="1.5707913267948965"
+      effort="3"
+      velocity="3" />
+  </joint>
+  <link
+    name="link6">
+    <inertial>
+      <origin
+        xyz="0.0365156319457788 -1.4770288640792E-05 0.000265587114209737"
+        rpy="0 0 0" />
+      <mass
+        value="0.315932346471264" />
+      <inertia
+        ixx="0.00031"
+        ixy="0.00000"
+        ixz="0.00000"
+        iyy="0.00015"
+        iyz="0.00000"
+        izz="0.00038" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint6"
+    type="revolute">
+    <origin
+      xyz="0.03045 0 0.084"
+      rpy="-3.1416 0 0" />
+    <parent
+      link="link5" />
+    <child
+      link="link6" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5707913267948965"
+      upper="1.5707913267948965"
+      effort="3"
+      velocity="3" />
+  </joint>
+  <link
+    name="link7">
+    <inertial>
+      <origin
+        xyz="-0.000327642774520215 -0.00482005374028087 -0.00167540868720402"
+        rpy="0 0 0" />
+      <mass
+        value="0.0484016660227936" />
+      <inertia
+        ixx="0.00001"
+        ixy="0.00000"
+        ixz="0.00000"
+        iyy="0.00002"
+        iyz="0.00000"
+        izz="0.00002" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link7.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link7.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint7"
+    type="prismatic">
+    <origin
+      xyz="0.073574 0.024629 0"
+      rpy="0 0 0" />
+    <parent
+      link="link6" />
+    <child
+      link="link7" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="0"
+      upper="0.04765"
+      effort="3"
+      velocity="3" />
+  </joint>
+  <link
+    name="link8">
+    <inertial>
+      <origin
+        xyz="-0.000327643744208572 0.00482005363510456 0.000752972893839382"
+        rpy="0 0 0" />
+      <mass
+        value="0.0484016646136083" />
+      <inertia
+        ixx="0.00001"
+        ixy="0.00000"
+        ixz="0.00000"
+        iyy="0.00002"
+        iyz="0.00000"
+        izz="0.00002" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link8.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/hz02/only_for_test/arm-these-way/resources/robots/arx5p2/meshes/link8.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint8"
+    type="prismatic">
+    <origin
+      xyz="0.073574 -0.024629 0"
+      rpy="0 0 0" />
+    <parent
+      link="link6" />
+    <child
+      link="link8" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      lower="0"
+      upper="0.04765"
+      effort="3"
+      velocity="3" />
+  </joint>
+</robot>
