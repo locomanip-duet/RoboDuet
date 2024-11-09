@@ -1,9 +1,9 @@
-# RoboDuet: A Framework Affording Mobile-Manipulation and Cross-Embodiment
+# RoboDuet: Whole-body Legged Loco-Manipulation with Cross-Embodiment Deployment
 <img src="./media/cross.png" alt="cross" width="100%" style="margin-top: -90px;">
 
-<h3> <a href="https://arxiv.org/abs/2403.17367">📝 Paper</a> | <a href="https://locomanip-duet.github.io/"> 🖼️ Project Page</a></h3>
+<h3> <a href="https://github.com/locomanip-duet/locomanip-duet.github.io/blob/master/RoboDuet.pdf">📝 Paper</a> | <a href="https://locomanip-duet.github.io/"> 🖼️ Project Page</a></h3>
 
-This repo is an official PyTorch implementation of our paper *<b>"RoboDuet: A Framework Affording Mobile-Manipulation and Cross-Embodiment"</b>*. Thanks to the cooperative policy mechanism and two-stage training strategy, the proposed framework demonstrates agile whole-body control and cross-embodiment deployment capabilities. <b>📺️More demo details can be found on our project page.</b>
+This repo is an official PyTorch implementation of our paper *<b>"RoboDuet: Whole-body Legged Loco-Manipulation with Cross-Embodiment Deployment"</b>*. Thanks to the cooperative policy mechanism and two-stage training strategy, the proposed framework demonstrates agile whole-body control and cross-embodiment deployment capabilities. <b>📺️More demo details can be found on our project page.</b>
 
 
 </br>
@@ -157,7 +157,7 @@ The base implementation is largely borrowed from [walk-these-ways](https://githu
 
 </br>
 
-# Citation
+<!-- # Citation
 ```
 @inproceedings{pan2024roboduet,
     title={RoboDuet: A Framework Affording Mobile-Manipulation and Cross-Embodiment}, 
@@ -167,5 +167,5 @@ The base implementation is largely borrowed from [walk-these-ways](https://githu
     archivePrefix={arXiv},
     primaryClass={cs.RO}
 }
-```
+``` -->
  
