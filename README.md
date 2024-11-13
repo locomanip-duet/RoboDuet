@@ -157,15 +157,15 @@ The base implementation is largely borrowed from [walk-these-ways](https://githu
 
 </br>
 
-<!-- # Citation
+# Citation
 ```
-@inproceedings{pan2024roboduet,
-    title={RoboDuet: A Framework Affording Mobile-Manipulation and Cross-Embodiment}, 
-    author={Guoping Pan and Qingwei Ben and Zhecheng Yuan and Guangqi Jiang and Yandong Ji and Jiangmiao Pang and Houde Liu and Huazhe Xu},
-    year={2024},
-    eprint={2403.17367},
-    archivePrefix={arXiv},
-    primaryClass={cs.RO}
+@misc{pan2024roboduetwholebodyleggedlocomanipulation,
+      title={RoboDuet: Whole-body Legged Loco-Manipulation with Cross-Embodiment Deployment}, 
+      author={Guoping Pan and Qingwei Ben and Zhecheng Yuan and Guangqi Jiang and Yandong Ji and Shoujie Li and Jiangmiao Pang and Houde Liu and Huazhe Xu},
+      year={2024},
+      eprint={2403.17367},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
 }
-``` -->
- 
+```
+
