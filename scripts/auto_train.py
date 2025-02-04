@@ -134,6 +134,17 @@ def train_go1(arg):
     Cfg.hybrid.reward_scales.arm_action_smoothness_1 = 5 * Cfg.reward_scales.action_smoothness_1
     Cfg.hybrid.reward_scales.arm_action_smoothness_2 = 5 * Cfg.reward_scales.action_smoothness_2
     
+    Cfg.use_rot6d = args.use_rot6d
+    if Cfg.use_rot6d:
+        Cfg.env.num_observations += 3
+
+        Cfg.arm.arm_num_observations += 3
+        Cfg.arm.arm_num_obs_history = Cfg.arm.arm_num_observations * Cfg.arm.arm_num_observation_history
+        Cfg.arm.arm_num_commands += 3
+
+        Cfg.dog.dog_num_observations += 3
+        Cfg.dog.dog_num_obs_history = Cfg.dog.dog_num_observations * Cfg.dog.dog_num_observation_history
+        
     global_switch.init_sigmoid_lr()
     # global_switch.init_linear_lr()
     
@@ -222,6 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=-1)
     parser.add_argument('--robot', type=str, default="go1", choices=["go1", "go2"])
     parser.add_argument('--wo_two_stage', action='store_true', default=False)
+    parser.add_argument('--use_rot6d', action='store_true', default=False)
 
     args = parser.parse_args()
     

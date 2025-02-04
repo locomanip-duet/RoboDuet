@@ -1,9 +1,9 @@
-# RoboDuet: Whole-body Legged Loco-Manipulation with Cross-Embodiment Deployment
+# RoboDuet: Learning a Cooperative Policy for Whole-body Legged Loco-Manipulation
 <img src="./media/cross.png" alt="cross" width="100%" style="margin-top: -90px;">
 
 <h3> <a href="https://github.com/locomanip-duet/locomanip-duet.github.io/blob/master/RoboDuet.pdf">📝 Paper</a> | <a href="https://locomanip-duet.github.io/"> 🖼️ Project Page</a></h3>
 
-This repo is an official PyTorch implementation of our paper *<b>"RoboDuet: Whole-body Legged Loco-Manipulation with Cross-Embodiment Deployment"</b>*. Thanks to the cooperative policy mechanism and two-stage training strategy, the proposed framework demonstrates agile whole-body control and cross-embodiment deployment capabilities. <b>📺️More demo details can be found on our project page.</b>
+This repo is an official PyTorch implementation of our paper *<b>"RoboDuet: Learning a Cooperative Policy for Whole-body Legged Loco-Manipulation}"</b>*. Thanks to the cooperative policy mechanism and two-stage training strategy, the proposed framework demonstrates agile whole-body control and zero-shot transfer deployment capabilities. <b>📺️More demo details can be found on our project page.</b>
 
 
 </br>
@@ -160,7 +160,7 @@ The base implementation is largely borrowed from [walk-these-ways](https://githu
 # Citation
 ```
 @misc{pan2024roboduetwholebodyleggedlocomanipulation,
-      title={RoboDuet: Whole-body Legged Loco-Manipulation with Cross-Embodiment Deployment}, 
+      title={RoboDuet: Learning a Cooperative Policy for Whole-body Legged Loco-Manipulation}}, 
       author={Guoping Pan and Qingwei Ben and Zhecheng Yuan and Guangqi Jiang and Yandong Ji and Shoujie Li and Jiangmiao Pang and Houde Liu and Huazhe Xu},
       year={2024},
       eprint={2403.17367},

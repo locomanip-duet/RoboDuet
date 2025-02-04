@@ -65,10 +65,11 @@ class Rewards:
 
     def _reward_arm_manip_commands_tracking_combine(self):
         lpy = self.env.get_lpy_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
-        rpy = self.env.get_alpha_beta_gamma_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
         lpy_error = torch.sum((torch.abs(lpy - self.env.commands_arm_obs[:, 0:3])) / self.env.commands_arm_lpy_range, dim=1)
-        rpy_error = torch.sum((torch.abs(rpy - self.env.commands_arm_obs[:, 3:6])) / self.env.commands_arm_rpy_range, dim=1)
         
+        rpy = self.env.get_alpha_beta_gamma_in_base_coord(torch.arange(self.env.num_envs, device=self.env.device))
+        rpy_error = torch.sum((torch.abs(rpy - self.env.target_abg)) / self.env.commands_arm_rpy_range, dim=1)
+    
         return torch.exp(-(self.env.cfg.rewards.manip_weight_lpy*lpy_error + self.env.cfg.rewards.manip_weight_rpy*rpy_error))
 
     def _reward_arm_action_smoothness_1(self):

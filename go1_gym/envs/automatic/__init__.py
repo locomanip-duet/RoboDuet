@@ -11,6 +11,7 @@ from go1_gym.utils.math_utils import (get_scale_shift, quat_apply_yaw,
 
 from .legged_robot import LeggedRobot, quaternion_to_rpy
 from .legged_robot_config import Cfg
+import pytorch3d.transforms as pt3d
 
 
 class VelocityTrackingEasyEnv(LeggedRobot):
@@ -73,10 +74,11 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                     pitch.unsqueeze(1),
                 ), dim=-1)
         else:
+            idx = 9 if self.cfg.use_rot6d else 6
             obs_buf = torch.cat(
                 (
                     obs_buf,
-                    self.commands_arm_obs[:, :6],
+                    self.commands_arm_obs[:, :idx],
                     roll.unsqueeze(1),
                     pitch.unsqueeze(1),
                 ), dim=-1)
@@ -183,10 +185,11 @@ class VelocityTrackingEasyEnv(LeggedRobot):
                     pitch.unsqueeze(1),
                 ), dim=-1)
         else:
+            idx = 9 if self.cfg.use_rot6d else 6
             obs_buf = torch.cat(
                 (obs_buf,
                     (self.commands_dog * self.commands_scale_dog)[:, :5],
-                    (self.commands_arm_obs[:, :6]) if global_switch.switch_open else torch.zeros_like(self.commands_arm_obs[:, :6]),
+                    (self.commands_arm_obs[:, :6]) if global_switch.switch_open else torch.zeros_like(self.commands_arm_obs[:, :idx]),
                     roll.unsqueeze(1),
                     pitch.unsqueeze(1),
                 ), dim=-1)
@@ -363,11 +366,15 @@ class EvaluationWrapper(VelocityTrackingEasyEnv):
             self._get_object_abg_in_ee()
 
         self.visual_rpy[:] = quaternion_to_rpy(self.obj_quats[:]).to(self.device)
-        rpy = self.quat_to_angle(self.obj_quats[:]).to(self.device)
-        
-        self.commands_arm_obs[:, 3] = rpy[:, 0]
-        self.commands_arm_obs[:, 4] = rpy[:, 1]
-        self.commands_arm_obs[:, 5] = rpy[:, 2]
+        if self.cfg.use_rot6d:
+            r6d = pt3d.matrix_to_rotation_6d(pt3d.quaternion_to_matrix(quats[:, [3, 0, 1, 2]]))
+            self.commands_arm_obs[:, 3:9] = r6d.to(self.device)
+        else:
+            # use delta angle
+            rpy = self.quat_to_angle(self.obj_quats[:]).to(self.device)
+            self.commands_arm_obs[:, 3] = rpy[:, 0]
+            self.commands_arm_obs[:, 4] = rpy[:, 1]
+            self.commands_arm_obs[:, 5] = rpy[:, 2]
 
 class KeyboardWrapper(VelocityTrackingEasyEnv):
     
@@ -568,10 +575,15 @@ class KeyboardWrapper(VelocityTrackingEasyEnv):
         # self.commands_arm[0:1, 4] = rpy[:, 1]
         # self.commands_arm[0:1, 5] = rpy[:, 2]
         
-        # use delta angle
-        self.commands_arm_obs[0:1, 3] = rpy[:, 0]
-        self.commands_arm_obs[0:1, 4] = rpy[:, 1]
-        self.commands_arm_obs[0:1, 5] = rpy[:, 2]
+        if self.cfg.use_rot6d:
+            r6d = pt3d.matrix_to_rotation_6d(pt3d.quaternion_to_matrix(quats[:, [3, 0, 1, 2]]))
+            self.commands_arm_obs[0:1, 3:9] = r6d.to(self.device)
+        else:
+            # use delta angle
+            rpy = self.quat_to_angle(self.obj_quats[0:1]).to(self.device)
+            self.commands_arm_obs[0:1, 3] = rpy[:, 0]
+            self.commands_arm_obs[0:1, 4] = rpy[:, 1]
+            self.commands_arm_obs[0:1, 5] = rpy[:, 2]
 
 class HistoryWrapper(gym.Wrapper):
 

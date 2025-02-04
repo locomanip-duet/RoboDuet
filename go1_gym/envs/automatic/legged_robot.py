@@ -20,7 +20,7 @@ from go1_gym.utils.math_utils import (get_scale_shift, quat_apply_yaw,
 from go1_gym.utils.terrain import Terrain
 
 from .legged_robot_config import Cfg
-
+import pytorch3d.transforms as pt3d
 
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: Cfg, sim_params, physics_engine, sim_device, headless, eval_cfg=None,
@@ -877,10 +877,16 @@ class LeggedRobot(BaseTask):
             self._get_object_abg_in_ee()
         
         self.visual_rpy[env_ids] = quaternion_to_rpy(self.obj_quats[env_ids]).to(self.device)
-        rpy = self.quat_to_angle(self.obj_quats[env_ids]).to(self.device)
-        self.commands_arm_obs[env_ids, 3] = rpy[:, 0]
-        self.commands_arm_obs[env_ids, 4] = rpy[:, 1]
-        self.commands_arm_obs[env_ids, 5] = rpy[:, 2]
+        self.target_abg[env_ids] = self.quat_to_angle(self.obj_quats[env_ids]).to(self.device)
+        if self.cfg.use_rot6d:
+            r6d = pt3d.matrix_to_rotation_6d(pt3d.quaternion_to_matrix(quats[:, [3, 0, 1, 2]]))
+            self.commands_arm_obs[env_ids, 3:9] = r6d.to(self.device)
+        else:
+            # use delta angle
+            rpy = self.quat_to_angle(self.obj_quats[env_ids]).to(self.device)
+            self.commands_arm_obs[env_ids, 3] = rpy[:, 0]
+            self.commands_arm_obs[env_ids, 4] = rpy[:, 1]
+            self.commands_arm_obs[env_ids, 5] = rpy[:, 2]
         
         self._resample_Traj_commands(env_ids)
 
@@ -1356,7 +1362,9 @@ class LeggedRobot(BaseTask):
                                           device=self.device, requires_grad=False)  # lpy, rpy for transfer to camera base
         self.commands_arm_obs = torch.zeros(self.num_envs, self.cfg.arm.arm_num_commands, dtype=torch.float,
                                           device=self.device, requires_grad=False)  # lpy, rpy for transfer to camera base
-        
+        self.target_abg = torch.zeros(self.num_envs, 3, dtype=torch.float,
+                                          device=self.device, requires_grad=False)
+                
         self.end_effector_state = self.rigid_body_state.view(self.num_envs, self.num_bodies, 13)[:, self.ee_idx] # link6
         self.x_vector = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.y_vector = to_torch([0., 1., 0.], device=self.device).repeat((self.num_envs, 1))
