@@ -40,7 +40,7 @@ conda activate roboduet
 ### Install this repo
 ```bash
 git clone https://github.com/locomanip-duet/RoboDuet.git
-ch RoboDuet
+cd RoboDuet
 pip install -r requirements.txt
 pip install -e .
 ```
